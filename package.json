@@ -1,0 +1,32 @@
+{
+  "name": "@jettoptx/xwealth",
+  "version": "0.1.0",
+  "description": "Agentic X Money wallet plugin for OPTX — graph nodes for Hermes/OpenClaw, JTX v2 gated, Solana + X payments",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "echo \"TODO\" && exit 0"
+  },
+  "keywords": [
+    "optx",
+    "jettoptx",
+    "x-money",
+    "agentic",
+    "wallet",
+    "solana",
+    "hermes",
+    "openclaw",
+    "jtx"
+  ],
+  "author": "Jett Optics",
+  "license": "MIT",
+  "dependencies": {
+    "@solana/web3.js": "^1.95.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0"
+  }
+}
