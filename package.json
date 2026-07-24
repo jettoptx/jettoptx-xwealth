@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "echo \"TODO\" && exit 0"
+    "test": "echo \"TODO\" && exit 0",
+    "check-wallet": "node scripts/check-wallet.mjs",
+    "check-jtx": "node scripts/check-jtx-gate.mjs"
   },
   "keywords": [
     "optx",
