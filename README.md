@@ -1,24 +1,212 @@
 # jettoptx-xwealth
 
-**Agentic X Money wallet plugin for the OPTX ecosystem**
+**Agentic X Money wallet plugin for the OPTX ecosystem** (JOE **Augment-08** / Wealth beta).
 
-Graph-compatible nodes that let any agent harness (Hermes, OpenClaw, Claw, or custom) manage Solana wallets, verify JTX v2 token gates, and execute X Money peer-to-peer payments — all from the terminal.
+Graph-compatible nodes and harness skills so **Hermes / OpenClaw / custom agents** can:
 
-## Core Features
+1. **Sign in** via a **Jett Optics–style Privy app forced to X (Twitter) OAuth only**
+2. **Ingest** X Money transfer QR / links (`https://x.com/i/money/transfer/{handle}`) via classic QR decode + **Grok Vision**
+3. **Gate** on **JTX v2** (`≥ 1` token)
+4. Route public actions through **AARON Router** + record state in **SpacetimeDB**
+5. Dry-run payout intents first; live send is operator-gated later
 
-- **JTX v2 Token Gate** — Requires holding ≥1 JTX v2 (`JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe`) for access
-- **X OAuth** — Uses the official Jet Optics Twitter/X app for secure authentication
-- **X Money Transfer Links** — Ingests `https://x.com/i/money/transfer/{handle}` or QR codes via Grok vision / multimodal
-- **Graph Nodes** — Drop-in nodes for decision → payout wiring in any agent graph
-- **Aeron / Elus Secure RPC** — Device-side router + compressed ethereal registration for end-to-end signing
-- **Hedgehog MCP Ready** — Compatible with OPTX MCP tools for swarm orchestration
+> **Status:** Scaffold + product README. Package API is still in progress. Local UI prototype: `OPTX-windows/8-Wealth/xwealth-ui` → `http://127.0.0.1:5180/`.
 
-## Quick Start
+---
+
+## Official constants
+
+| Item | Value |
+|------|--------|
+| **JTX v2 mint (canonical)** | `JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe` |
+| **X Money transfer URL shape** | `https://x.com/i/money/transfer/{handle}` |
+| **AARON public router (ref)** | [jettoptx/jettoptx-aaron-router](https://github.com/jettoptx/jettoptx-aaron-router) |
+| **This plugin** | [jettoptx/jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth) |
+| **Docs** | https://jettoptx.dev/docs |
+| **Sole product DB** | **SpacetimeDB** (not Postgres / Convex) |
+
+---
+
+## Required downloads (agent harness)
+
+Operators and agents must clone **both** repos. AARON is the public edge/router surface; xwealth is the X Money + JTX gate plugin.
+
+### Copy-paste — clone
 
 ```bash
+# Pick a harness root (example)
+export OPTX_HARNESS="$HOME/optx-harness"
+mkdir -p "$OPTX_HARNESS" && cd "$OPTX_HARNESS"
+
+# 1) X Wealth plugin (this repo)
+git clone https://github.com/jettoptx/jettoptx-xwealth.git
+
+# 2) AARON Router (required for session, relay, x402, gaze bridges)
+git clone https://github.com/jettoptx/jettoptx-aaron-router.git
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$OPTX_HARNESS = "$env:USERPROFILE\optx-harness"
+New-Item -ItemType Directory -Force -Path $OPTX_HARNESS | Out-Null
+Set-Location $OPTX_HARNESS
+git clone https://github.com/jettoptx/jettoptx-xwealth.git
+git clone https://github.com/jettoptx/jettoptx-aaron-router.git
+```
+
+### Copy-paste — agent system prompt (drop into Hermes / OpenClaw)
+
+```text
+You are an OPTX X Wealth operator agent (Augment-08).
+
+Required local code (must exist before any payout/gate work):
+- {OPTX_HARNESS}/jettoptx-xwealth
+- {OPTX_HARNESS}/jettoptx-aaron-router
+
+Rules:
+1. Auth is Privy with X (Twitter) OAuth ONLY — no email / Google / wallet-only login for this product surface.
+2. Never place live X Money transfers unless the human explicitly says LIVE and policy allows.
+3. Prefer: paste transfer URL → classic QR decode → Grok Vision (VLM) fallback.
+4. JTX gate: wallet must hold ≥1 JTX v2 mint JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe.
+5. Persist ingest/resolve/gate rows to SpacetimeDB via AARON reducers when available; do not invent a second database.
+6. No private keys in chat logs. Signing stays device-side / AARON / embedded Privy wallet confirmation.
+```
+
+---
+
+## Auth: Jett Optics Privy, **forced X OAuth**
+
+JettChat / jettoptics uses Privy with Solana embedded wallets. **X Wealth uses the same Privy app family**, but login is **X-only**.
+
+### Difference from full JettChat Privy
+
+| | JettChat / DOJO (ref) | **X Wealth (this product)** |
+|--|----------------------|-----------------------------|
+| Provider | Privy | Privy (same app id family) |
+| `loginMethods` | `["email", "twitter"]` (example) | **`["twitter"]` only** |
+| Wallet | Solana embedded + external | Solana embedded on X login |
+| Identity key | Privy DID + X subject | **X user id / handle primary**; Privy DID stored for wallet |
+
+### Copy-paste — Privy config (React / Next)
+
+```tsx
+// providers/XWealthPrivy.tsx
+"use client";
+
+import { PrivyProvider, type PrivyClientConfig } from "@privy-io/react-auth";
+import {
+  defaultSolanaRpcsPlugin,
+  toSolanaWalletConnectors,
+} from "@privy-io/react-auth/solana";
+
+const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
+
+/** X Wealth: force X (Twitter) OAuth — no email / SMS / Google. */
+export const XWEALTH_PRIVY_CONFIG: PrivyClientConfig = {
+  embeddedWallets: {
+    solana: { createOnLogin: "users-without-wallets" },
+  },
+  externalWallets: {
+    solana: { connectors: toSolanaWalletConnectors() },
+  },
+  appearance: {
+    walletChainType: "solana-only",
+    theme: "dark",
+    accentColor: "#6d8cff",
+    logo: "/jtx-joe.jpg", // optional brand mark
+  },
+  // FORCE X OAUTH ONLY
+  loginMethods: ["twitter"],
+  plugins: [defaultSolanaRpcsPlugin()],
+};
+
+export function XWealthPrivyProvider({ children }: { children: React.ReactNode }) {
+  if (!PRIVY_APP_ID) {
+    throw new Error("NEXT_PUBLIC_PRIVY_APP_ID is required for X Wealth login");
+  }
+  return (
+    <PrivyProvider appId={PRIVY_APP_ID} config={XWEALTH_PRIVY_CONFIG}>
+      {children}
+    </PrivyProvider>
+  );
+}
+```
+
+### Privy dashboard checklist (human)
+
+1. Open the **Jett Optics / JettChat Privy app** (or a dedicated X Wealth app sharing the same ecosystem).
+2. Enable **Twitter / X** social login.
+3. Disable or leave unused: email / SMS / Google for this product surface (client still forces `loginMethods: ["twitter"]`).
+4. Solana chain enabled; create embedded wallet on login.
+5. Set allowed origins: `http://127.0.0.1:5180`, production X Wealth host, AARON CORS list.
+6. Copy **App ID** → `NEXT_PUBLIC_PRIVY_APP_ID` (never commit App Secret to the client).
+
+### Env (UI / agent host)
+
+```bash
+# Client
+NEXT_PUBLIC_PRIVY_APP_ID=clp_xxxxxxxx
+
+# Server / AARON (never ship to browser)
+PRIVY_APP_SECRET=          # verify sessions server-side if needed
+SOLANA_RPC_URL=            # Helius or AARON-adjacent RPC
+XAI_API_KEY=               # Grok Vision for QR fallback
+AARON_URL=https://aaron.jettoptics.ai   # or local http://127.0.0.1:8888
+SPACETIMEDB_URL=https://stdb.jettoptics.ai
+JTX_MINT=JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe
+```
+
+---
+
+## Install AARON Router (required)
+
+```bash
+cd "$OPTX_HARNESS/jettoptx-aaron-router"
+python -m venv .venv
+# Windows: .\.venv\Scripts\Activate.ps1
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # fill SPACETIMEDB_URL, SOLANA_RPC_URL, ALLOWED_ORIGINS
+python aaron_router.py # default :8888
+```
+
+### SDK snippets (from AARON repo)
+
+**Python**
+
+```python
+from sdk.python.aaron_client import AaronClient
+
+client = AaronClient("http://127.0.0.1:8888")  # or public AARON base
+session = client.create_session(wallet_address="YOUR_SOLANA_PUBKEY")
+status = client.poll_session(session["sessionId"])
+```
+
+**TypeScript**
+
+```typescript
+import { AaronClient } from "./sdk/typescript/aaron-client";
+
+const aaron = new AaronClient("http://127.0.0.1:8888");
+const session = await aaron.createSession({ walletAddress: "YOUR_PUBKEY" });
+const result = await aaron.waitForVerification(session.sessionId);
+```
+
+Health: `GET {AARON_URL}/health`
+
+---
+
+## Install this package (xwealth)
+
+```bash
+cd "$OPTX_HARNESS/jettoptx-xwealth"
+npm install
+npm run build   # when dist pipeline is complete
+
+# or from another project
 npm install @jettoptx/xwealth
-# or
-pnpm add @jettoptx/xwealth
+# / pnpm add @jettoptx/xwealth
 ```
 
 ```ts
@@ -26,53 +214,184 @@ import { XWealthPlugin } from "@jettoptx/xwealth";
 
 const plugin = new XWealthPlugin({
   jtxMint: "JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe",
-  rpc: "https://your-elus-rpc",
+  rpcUrl: process.env.SOLANA_RPC_URL,
 });
 
-// Graph node example
+// Graph node (scaffold — dry-run until live is enabled)
 const payoutNode = plugin.createPayoutNode({
-  recipientHandle: "JoshuaJett", // or resolved from transfer link / QR
+  recipientHandle: "JoshuaJett",
   amount: 5.0,
-  currency: "USD", // X Money
+  currency: "USD",
 });
 ```
 
-## Architecture (High Level)
+---
 
+## Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  User / Hermes agent                                        │
+│   • Privy loginMethods: ["twitter"] only                    │
+│   • Camera / file QR or paste transfer URL                  │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  xwealth-ui / plugin                                        │
+│   1) paste URL                                              │
+│   2) classic QR decode (jsQR / zxing)                       │
+│   3) Grok Vision VLM fallback (structured JSON)             │
+│   4) JTX ≥1 gate (Solana RPC)                               │
+│   5) dry-run payout intent                                  │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+              ┌─────────────┴─────────────┐
+              ▼                           ▼
+     ┌─────────────────┐        ┌──────────────────┐
+     │ AARON Router    │        │ SpacetimeDB      │
+     │ session/relay   │───────▶│ ingest / resolve │
+     │ x402 / optx     │        │ gate / intent    │
+     └─────────────────┘        └──────────────────┘
 ```
-Agent Decision Node
-        ↓
-   JTX Gate Check  ←── Solana RPC / Aeron Router
-        ↓
-  X OAuth Session  ←── Jet Optics X App
-        ↓
- X Money Transfer  ←── /i/money/transfer/{handle} or QR ingest
-        ↓
-   Signed Payout
+
+### Ingest order (do not invert)
+
+1. **Paste** `https://x.com/i/money/transfer/{handle}` → highest fidelity  
+2. **Classic QR** on phone photo or sharp PNG  
+3. **Grok Vision** only if 1–2 fail or confidence low  
+
+Phone photos of the live X Money QR are preferred over soft web screenshots.
+
+---
+
+## Hermes / agent skills (copy-paste)
+
+Create under the harness:
+
+```bash
+mkdir -p ~/.hermes/skills/custom/xwealth
 ```
 
-## Status
+### `~/.hermes/skills/custom/xwealth/SKILL.md`
 
-Scaffold only. Core implementation in progress.
+```markdown
+---
+name: xwealth
+description: >
+  X Money QR/link ingest + JTX gate for OPTX Augment-08.
+  Use when user says xwealth, X Money QR, transfer link, or JTX gate.
+  Requires clones: jettoptx-xwealth + jettoptx-aaron-router.
+  Auth: Privy X OAuth only. Never live-send unless user says LIVE.
+---
 
-- [x] Repo + README
-- [ ] TypeScript package structure
-- [ ] Auth + JTX verification modules
-- [ ] Graph node definitions (Hermes / OpenClaw compatible)
-- [ ] X Money transfer resolver
-- [ ] QR / multimodal ingest helpers
-- [ ] Hedgehog MCP tool bindings
+# xwealth skill
 
-## Official CA (JTX v2)
+## Paths
+- Plugin: `$OPTX_HARNESS/jettoptx-xwealth`
+- AARON: `$OPTX_HARNESS/jettoptx-aaron-router`
+- Local UI: `OPTX-windows/8-Wealth/xwealth-ui` → http://127.0.0.1:5180/
 
+## Procedure
+1. Confirm user is X-OAuth authenticated (Privy twitter-only).
+2. Accept paste URL OR image path (prefer phone capture).
+3. Decode: classic QR first → Grok Vision fallback.
+4. Normalize { handle, transferUrl, confidence, method }.
+5. checkJtxGate(wallet) — mint JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe.
+6. Emit dry-run intent; record to SpacetimeDB via AARON when wired.
+7. STOP before live payout unless explicit LIVE + policy pass.
 ```
-JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe
+
+### Optional Grok Build skill (Windows)
+
+```powershell
+# Mirror into Grok skills
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.grok\skills\xwealth" | Out-Null
+Copy-Item "$env:USERPROFILE\optx-harness\jettoptx-xwealth\skills\xwealth\SKILL.md" `
+  "$env:USERPROFILE\.grok\skills\xwealth\SKILL.md" -ErrorAction SilentlyContinue
 ```
+
+(Ship `skills/xwealth/SKILL.md` in this repo when the package matures; until then paste the block above.)
+
+---
+
+## Local UI (Canvas UI shell)
+
+```powershell
+cd C:\Users\joshu\OPTX-windows\8-Wealth\xwealth-ui
+npm install
+npm run dev
+# → http://127.0.0.1:5180/
+```
+
+- **Liquid** hero + **GlassObject** QR panel (Canvas UI / shadcn registry `@canvas-ui`)
+- Background: brand dark asset; QR file pick stub → wire ingest API next
+
+### Canvas UI / shadcn MCP
+
+```bash
+# components.json pins:
+# "@canvas-ui": "https://canvasui.dev/r/{name}.json"
+
+npx shadcn@latest add @canvas-ui/liquid-react
+npx shadcn@latest add @canvas-ui/glass-object-react
+
+# MCP (Grok / Cursor): npx -y shadcn@latest mcp
+# grok mcp doctor shadcn
+```
+
+---
+
+## SpacetimeDB (sole DB)
+
+Do **not** add Postgres/Convex for X Wealth product state.
+
+Suggested rows (names illustrative — implement as STDB tables/reducers):
+
+| Table | Purpose |
+|-------|---------|
+| `xwealth_user` | `privy_did`, `x_user_id`, `x_handle`, wallet |
+| `xwealth_ingest` | image hash, source (`camera`/`upload`/`paste`), ts |
+| `xwealth_resolve` | method (`paste`/`qr_lib`/`vlm`), url, handle, confidence, model |
+| `xwealth_gate` | wallet, jtx balance, pass/fail |
+| `xwealth_intent` | dry-run / live intent status |
+
+Public write path when ready: **AARON** → STDB reducers (same pattern as JettChat).
+
+---
+
+## Security / guardrails
+
+- **No live money** in v0 without explicit operator mode  
+- **No private keys** in agent chat or browser `localStorage` dumps  
+- **X OAuth only** on the X Wealth surface (do not re-enable email login in client config)  
+- JTX gate is **read-only balance check** until stake SC exists  
+- VLM: structured JSON only; refuse non–X Money images  
+
+---
+
+## Roadmap checklist
+
+- [x] Repo + this README (harness + Privy X-only + dual clone)
+- [x] Local UI prototype (`xwealth-ui`) + Canvas UI Liquid / GlassObject
+- [ ] Privy X-only provider wired into `xwealth-ui`
+- [ ] Ingest API: paste + classic QR + Grok Vision
+- [ ] Real `checkJtxGate` via Solana RPC
+- [ ] SpacetimeDB reducers + AARON bindings
+- [ ] Hermes skill package under `skills/xwealth`
+- [ ] Publish `@jettoptx/xwealth` with real graph nodes
+- [ ] Live X Money send (operator + policy)
+
+---
 
 ## Related
 
-- [jettoptx-docs](https://github.com/jettoptx/jettoptx-docs)
-- [jettoptx-aaron-router](https://github.com/jettoptx/jettoptx-aaron-router)
-- Live docs: https://jettoptx.dev/docs
+| Repo / surface | Role |
+|----------------|------|
+| [jettoptx-aaron-router](https://github.com/jettoptx/jettoptx-aaron-router) | Public router, SDKs, session, x402 |
+| [jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth) | This plugin |
+| JettChat Privy providers | Reference Privy + Solana wallet stack (`loginMethods` includes email+twitter there; **X Wealth forces twitter only**) |
+| Local `8-Wealth/traderjoe` | Wealth-08 trading brain (SPCX) — **separate** from X Money rails |
+| Local `8-Wealth/xwealth-ui` | Canvas UI localhost shell |
 
 MIT License — Jett Optics / OPTX
