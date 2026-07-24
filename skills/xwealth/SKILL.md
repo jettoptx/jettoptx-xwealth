@@ -5,12 +5,23 @@ description: >
   Use when user says xwealth, X Money QR, transfer link, or JTX gate.
   Requires clones: jettoptx-xwealth + jettoptx-aaron-router.
   Auth: Privy X OAuth only. Never live-send unless user says LIVE.
+  Works with Hermes, OpenClaw, Grok Build, Claude Code, Codex, Cursor, Pi.
 metadata:
   short-description: "X Money QR + JTX gate (Augment-08)"
   augment: wealth-08
+  harnesses:
+    - hermes
+    - openclaw
+    - grok-build
+    - claude-code
+    - codex
+    - cursor
+    - pi
 ---
 
 # xwealth skill
+
+Load full system prompt: `prompts/AGENT_SYSTEM.md` in this repo.
 
 ## Required repos
 
@@ -19,10 +30,29 @@ git clone https://github.com/jettoptx/jettoptx-xwealth.git
 git clone https://github.com/jettoptx/jettoptx-aaron-router.git
 ```
 
+## Install this skill on common harnesses
+
+```bash
+# Hermes
+mkdir -p ~/.hermes/skills/custom/xwealth
+cp skills/xwealth/SKILL.md ~/.hermes/skills/custom/xwealth/SKILL.md
+
+# Grok Build
+mkdir -p ~/.grok/skills/xwealth
+cp skills/xwealth/SKILL.md ~/.grok/skills/xwealth/SKILL.md
+```
+
+| Harness | Also put |
+|---------|----------|
+| Claude Code | Section in `CLAUDE.md` or copy `prompts/AGENT_SYSTEM.md` |
+| Codex | `AGENTS.md` include / paste |
+| Cursor | `.cursor/rules/xwealth.mdc` pointing at `prompts/AGENT_SYSTEM.md` |
+| OpenClaw / Pi | System / persona node = `prompts/AGENT_SYSTEM.md` |
+
 ## Auth
 
-- Privy config: `loginMethods: ["twitter"]` **only** (Jett Optics Privy family, X forced).
-- Identity: X handle / user id + Privy DID + Solana embedded wallet.
+- Privy: `loginMethods: ["twitter"]` **only**
+- Identity: X handle / id + Privy DID + Solana embedded wallet
 
 ## Procedure
 
@@ -43,3 +73,4 @@ git clone https://github.com/jettoptx/jettoptx-aaron-router.git
 - Enable email/Google login on this surface
 - Store private keys in chat
 - Call live send without human LIVE confirmation
+- Use Postgres/Convex as product DB (SpacetimeDB only)
