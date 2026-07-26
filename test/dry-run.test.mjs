@@ -1,5 +1,5 @@
 /**
- * Dry-run pipeline tests — no secrets, LIVE blocked, optional skipGate.
+ * Dry-run pipeline tests â€” no secrets, LIVE blocked, optional skipGate.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -9,10 +9,10 @@ import { inspectSigner } from "../dist/signer.js";
 describe("runDryRun", () => {
   it("ok dry-run with mock gate + pay URL", async () => {
     const intent = await runDryRun({
-      to: "https://x.com/i/money/pay/JoshuaJett",
+      to: "https://x.com/i/money/pay/demo_user",
       amount: 1,
       asset: "USDC",
-      wallet: "GtAkS5tYaqi6XQrinuFyqKQkK29SFQsUY9gQ2XpLXLwq",
+      wallet: "11111111111111111111111111111111",
       skipGate: true,
       mockGate: {
         ok: true,
@@ -25,7 +25,7 @@ describe("runDryRun", () => {
     assert.equal(intent.live, false);
     assert.equal(intent.settle, false);
     assert.equal(intent.wouldSettle, false);
-    assert.equal(intent.handle, "JoshuaJett");
+    assert.equal(intent.handle, "demo_user");
     assert.equal(intent.kind, "pay");
     assert.equal(intent.amount, 1);
     assert.equal(intent.jtxGate.ok, true);
@@ -36,11 +36,11 @@ describe("runDryRun", () => {
 
   it("fails bad amount", async () => {
     const intent = await runDryRun({
-      to: "JoshuaJett",
+      to: "demo_user",
       amount: 0,
       skipGate: true,
       mockGate: { ok: true, uiAmount: 1, message: "mock" },
-      wallet: "GtAkS5tYaqi6XQrinuFyqKQkK29SFQsUY9gQ2XpLXLwq",
+      wallet: "11111111111111111111111111111111",
     });
     assert.equal(intent.ok, false);
     assert.ok(intent.blockers.some((b) => b.includes("amount")));
@@ -52,20 +52,20 @@ describe("runDryRun", () => {
       amount: 1,
       skipGate: true,
       mockGate: { ok: true, uiAmount: 1, message: "mock" },
-      wallet: "GtAkS5tYaqi6XQrinuFyqKQkK29SFQsUY9gQ2XpLXLwq",
+      wallet: "11111111111111111111111111111111",
     });
     assert.equal(intent.ok, false);
   });
 
   it("LIVE is always blocked even with confirm", async () => {
     const intent = await runDryRun({
-      to: "https://x.com/i/money/pay/JoshuaJett",
+      to: "https://x.com/i/money/pay/demo_user",
       amount: 1,
       mode: "LIVE",
       liveConfirm: "LIVE",
       skipGate: true,
       mockGate: { ok: true, uiAmount: 1, message: "mock" },
-      wallet: "GtAkS5tYaqi6XQrinuFyqKQkK29SFQsUY9gQ2XpLXLwq",
+      wallet: "11111111111111111111111111111111",
     });
     assert.equal(intent.ok, false);
     assert.equal(intent.live, false);
@@ -75,12 +75,12 @@ describe("runDryRun", () => {
 
   it("LIVE without confirm blocked", async () => {
     const intent = await runDryRun({
-      to: "JoshuaJett",
+      to: "demo_user",
       amount: 1,
       mode: "LIVE",
       skipGate: true,
       mockGate: { ok: true, uiAmount: 1, message: "mock" },
-      wallet: "GtAkS5tYaqi6XQrinuFyqKQkK29SFQsUY9gQ2XpLXLwq",
+      wallet: "11111111111111111111111111111111",
     });
     assert.equal(intent.ok, false);
     assert.ok(intent.blockers.some((b) => b.includes("liveConfirm")));

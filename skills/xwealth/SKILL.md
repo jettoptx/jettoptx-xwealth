@@ -3,10 +3,9 @@ name: xwealth
 description: >
   X Money QR/link ingest + JTX gate for OPTX Augment-08.
   Use when user says xwealth, X Money QR, transfer link, or JTX gate.
-  Requires clone: jettoptx-xwealth (AARON router optional later — not required for beta dry-run).
-    Auth: Jett Optics X OAuth app (optional) + Solana wallet + JTX ≥1 gate.
-    No Privy. No SpacetimeDB required for beta. Never live-send unless user says LIVE.
-  Works with Hermes, OpenClaw, Grok Build, Claude Code, Codex, Cursor, Pi.
+  Clone jettoptx-xwealth (aaron-router optional). Auth: optional X OAuth + Solana
+  wallet + JTX ≥1. No Privy. No SpacetimeDB required for beta. Never live-send
+  unless user says LIVE. Hermes, OpenClaw, Grok Build, Claude Code, Codex, Cursor, Pi.
 metadata:
   short-description: "X Money QR + JTX gate (Augment-08)"
   augment: wealth-08
@@ -22,110 +21,59 @@ metadata:
 
 # xwealth skill
 
-Load full system prompt: `prompts/AGENT_SYSTEM.md` in this repo.
+See also: `prompts/AGENT_SYSTEM.md`, [INSTALL.md](../../INSTALL.md), [ROADMAP.md](../../ROADMAP.md).
 
 ## Required repos
 
 ```bash
 git clone https://github.com/jettoptx/jettoptx-xwealth.git
+# optional edge:
 git clone https://github.com/jettoptx/jettoptx-aaron-router.git
 ```
 
-## Install this skill on common harnesses
+## Install skill
 
 ```bash
 # Hermes
 mkdir -p ~/.hermes/skills/custom/xwealth
 cp skills/xwealth/SKILL.md ~/.hermes/skills/custom/xwealth/SKILL.md
 
-# Grok Build
+# Grok Build (or: grok plugin install jettoptx/jettoptx-xwealth --trust)
 mkdir -p ~/.grok/skills/xwealth
 cp skills/xwealth/SKILL.md ~/.grok/skills/xwealth/SKILL.md
 ```
 
-| Harness | Also put |
-|---------|----------|
-| Claude Code | Section in `CLAUDE.md` or copy `prompts/AGENT_SYSTEM.md` |
-| Codex | `AGENTS.md` include / paste |
-| Cursor | `.cursor/rules/xwealth.mdc` pointing at `prompts/AGENT_SYSTEM.md` |
-| OpenClaw / Pi | System / persona node = `prompts/AGENT_SYSTEM.md` |
-
 ## Auth (no Privy)
 
-1. **Required:** Solana wallet pubkey + **≥ 1 JTX v2**
-   - mint `JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe`
-   - `npm run setup` or `npm run check-jtx -- --wallet <PUBKEY>`
-2. **Optional identity:** Jett Optical Encryption X OAuth app (`32724640`)
-   - Public Client ID env: `X_CLIENT_ID` / `XWEALTH_X_CLIENT_ID`
-   - Same app as Hermes x-operator / JettChat X surface
-3. X OAuth does **not** create a Solana key — wallet is always separate
-
-## Fee treasury (hosted X API / metered proxy)
-
-Hosted calls that hit **your** X app credits should collect a small fee (USDC preferred) to:
-
-```text
-9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7
-```
-
-- Label: **OPTX Squads vault** (multisig — not a hot agent key)
-- Env: `FEE_RECEIVER_SOLANA=9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7`
-- Policy: `agent-cards/crypto-rails.json` → `treasury` + `x_api_fee`
-- Free path: paste-only X Money link parse (no `api.x.com`) — no fee
+1. **Required:** `SOLANA_WALLET` + **≥1 JTX** (`JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe`)
+2. **Optional:** X OAuth via **Jett Optical Encryption** app (public `X_CLIENT_ID` only)
+3. Wallet is separate from X OAuth
 
 ```bash
 export SOLANA_WALLET='<pubkey>'
 cd jettoptx-xwealth && npm install && npm run setup
-# exit 0 = plugin ready; exit 1 = need ≥1 JTX
 ```
+
+## Fee treasury (hosted X API only)
+
+When a hosted proxy meters X API usage, fees go to `FEE_RECEIVER_SOLANA`  
+(see `agent-cards/crypto-rails.json`). Paste-only link parse needs **no** X API and no fee.
 
 ## Procedure
 
-1. `npm run setup` — wallet + JTX gate (lock tools if fail).
-2. Accept paste URL **or** image (prefer phone capture of live X Money QR).
-3. Decode: classic QR first → Grok Vision fallback.
-4. Normalize `{ handle, transferUrl, kind, confidence, method }` via `parseMoneyLink`.
-   - Receive QR payloads are often `https://x.com/i/money/pay/{handle}` (not only `/transfer/`).
-   - Both `/pay/` and `/transfer/` are valid X Money links — parse both.
-5. Dry-run payout intent (`npm run dry-run` / `runDryRun()` / `buildDryRunIntent`). **No SpacetimeDB required.**
-   - Optional: `XWEALTH_KEYPAIR=/path/to/id.json` checks signer pubkey match (secret never logged).
-6. **STOP** before live payout unless explicit LIVE + policy pass + **local** signer + settle shipped.
-   - `mode: LIVE` is hard-blocked in code today (SHIP.md).
-   - Never put private keys in git or chat.
+1. `npm run setup` — gate  
+2. Paste pay/transfer URL or QR  
+3. `parseMoneyLink` → dry-run intent (`npm run dry-run`)  
+4. **STOP** before LIVE unless product + policy allow  
 
-## Local UI
+## Hosts
 
-`OPTX-windows/8-Wealth/xwealth-ui` → http://127.0.0.1:3001/
-
-- Browser JTX gate uses Vite proxy `/api/solana-rpc` (public RPC blocks browser `Origin` with 403).
-- Pay card nests QR in CSS glass; hover tilts card only (backdrop fixed).
-
-## Data / ledger
-
-- **Beta:** local session `~/.xwealth/session.json` (pubkey + gate result only) — gitignored patterns.
-- **SpacetimeDB:** optional later for usage ledger — **not required** for gate, parse, UI, or dry-run.
-
-## Agentcard (virtual cards + MCP)
-
-For any agent that downloads this repo:
-
-```bash
-npm run agent-cards:setup
-# after human login:
-npm run agent-cards:wizard
-# or:
-npx agent-cards companies wizard --agent --yes --app-name "X Wealth" --app-url http://localhost:3001
-```
-
-- Skills land in `.agents/skills/` (`agent-card`, `mcp-server`)
-- MCP example: `agent-cards/mcp.agent-cards.example.json`
-- **Crypto default:** convert / cash-out as **USDC** on **Solana** or **Base** (`agent-cards/crypto-rails.json`)
-- Cards are live money — require human confirm before create/withdraw/checkout
+- Product UI (planned): **https://wealth.astroknots.space**  
+- Community: [agentcommunity.org/m/jett-optics](https://agentcommunity.org/m/jett-optics)  
 
 ## Do not
 
-- Reintroduce Privy on this surface
-- Store private keys / X client secrets in chat or git
-- Call live send without human LIVE confirmation
-- Treat SpacetimeDB as required for beta (it is optional later)
-- Treat X OAuth alone as gate pass (must hold ≥1 JTX)
+- Privy  
+- Secrets in chat/git  
+- LIVE without confirmation  
+- Require SpacetimeDB or Agentcard for beta  

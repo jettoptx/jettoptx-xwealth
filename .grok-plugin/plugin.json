@@ -1,0 +1,20 @@
+{
+  "name": "xwealth",
+  "version": "0.1.0",
+  "description": "OPTX X Wealth (Augment-08): Solana JTX ≥1 gate, X Money link/QR dry-run intents, Hermes and Grok skills. No Privy. Live settle not included.",
+  "author": {
+    "name": "Jett Optical Technologies",
+    "email": "joe@jettoptics.ai"
+  },
+  "homepage": "https://github.com/jettoptx/jettoptx-xwealth",
+  "keywords": [
+    "xwealth",
+    "jtx",
+    "solana",
+    "x-money",
+    "optx",
+    "hermes",
+    "dry-run"
+  ],
+  "skills": ["./skills/"]
+}

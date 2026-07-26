@@ -1,46 +1,29 @@
-# X Wealth — ship status (beta)
+# Ship status (beta)
 
-**Status:** **Augment-08 beta / dry-run** — safe to merge and demo. **Not** live money production.
+**Status:** Augment-08 **beta / dry-run**. Safe for public install demos. **Not** live money production.
 
-**SpacetimeDB:** **Not required** for this app’s beta path (gate, QR/link parse, UI, dry-run intent). Optional later for usage ledger only.
+**SpacetimeDB:** not required for gate, parse, dry-run, or skills.
 
-## Ship as beta ✅
+## Shipped ✅
 
 - Wallet + **≥1 JTX** gate (`npm run setup`, `check-jtx`)
-- Hermes / Grok skill install docs
-- Optional Jett Optics X OAuth identity (app `32724640`)
-- Parse **both** `https://x.com/i/money/pay/{handle}` and `/transfer/{handle}`
-- USDC Sol/Base policy + fee treasury `9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7` (docs)
-- UI: `OPTX-windows/8-Wealth/xwealth-ui` → http://localhost:3001/
-  - Browser JTX gate uses Vite proxy `/api/solana-rpc` (avoids public RPC Origin 403)
-- Unit tests: `npm test` (parse + dry-run + LIVE blocked)
-- CLI dry-run: `npm run dry-run -- --to <url|handle> --amount 1`
-- Local signer path env `XWEALTH_KEYPAIR` (optional; secret never in intent JSON)
-- **No Privy** · **No secrets in git** (see `.gitignore`) · **No STDB required**
+- Hermes / Grok skill packaging
+- Optional X OAuth identity docs (Jett Optical Encryption app — public client id only)
+- Parse `https://x.com/i/money/pay/{handle}` and `/transfer/{handle}`
+- USDC Sol/Base policy (`agent-cards/crypto-rails.json`)
+- Fee receiver configurable via `FEE_RECEIVER_SOLANA`
+- `npm test` + `npm run dry-run`
+- Optional local signer path `XWEALTH_KEYPAIR` (secret never in intent JSON)
+- **No Privy** · no secrets in git
 
-## Not production yet ❌
+## Not shipped ❌
 
-- Live X Money settle / USDC→X Money bridge
-- Local/hot **signer** path for LIVE (keypair stays off-repo)
-- Hosted X API proxy with metered fee to treasury
-- MPP / x402 agent pay wiring
-- Optional SpacetimeDB usage ledger (Jetson) — **not a beta blocker**
-- Full e2e UI suite
+- Live X Money settle / USDC→X Money bridge  
+- Hosted X API proxy with metered fees  
+- MPP / x402 wiring  
+- Optional usage ledger  
+- Full e2e UI suite in this repo  
 
-## Dev install
+## Install
 
-```bash
-git clone https://github.com/jettoptx/jettoptx-xwealth.git
-cd jettoptx-xwealth
-export SOLANA_WALLET='<pubkey>'   # never commit private keys
-npm install && npm run setup && npm test
-cp skills/xwealth/SKILL.md ~/.hermes/...   # or AppData Local hermes custom-skills
-```
-
-UI (Windows prototype — separate tree):
-
-```bash
-cd OPTX-windows/8-Wealth/xwealth-ui
-npm install && npm run dev
-# http://localhost:3001/
-```
+See **[INSTALL.md](./INSTALL.md)** and **[REPOS.md](./REPOS.md)**.

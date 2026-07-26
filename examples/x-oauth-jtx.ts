@@ -2,7 +2,7 @@
  * Example: X Wealth auth without Privy
  *
  * - Identity: Jett Optical Encryption X OAuth app (32724640)
- * - Gate: Solana wallet holds ≥ 1 JTX v2
+ * - Gate: Solana wallet holds â‰¥ 1 JTX v2
  *
  * Client ID is public. Client secret stays server-side only
  * (Hermes / AARON / never ship to browser bundles).
@@ -48,7 +48,7 @@ async function main() {
   if (!state.ready) process.exit(1);
 
   const node = plugin.createPayoutNode({
-    recipientHandle: "JoshuaJett",
+    recipientHandle: "demo_user",
     amount: 1,
     currency: "USD",
   });

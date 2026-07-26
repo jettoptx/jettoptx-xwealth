@@ -2,7 +2,7 @@
  * X Money pay / transfer link helpers (plugin + agent harness).
  * QR / share payloads seen in the wild:
  *   https://x.com/i/money/transfer/{handle}
- *   https://x.com/i/money/pay/{handle}   ← receive QR (e.g. JoshuaJett)
+ *   https://x.com/i/money/pay/{handle}   â† receive QR (e.g. demo_user)
  */
 
 const MONEY_PATH_RE =
@@ -27,7 +27,7 @@ function canonicalUrl(kind: MoneyLinkKind, handle: string): string {
 
 /**
  * Parse bare handle or X Money pay/transfer URL into a normalized intent shape.
- * Pure — no network, no wallet, no SpacetimeDB.
+ * Pure â€” no network, no wallet, no SpacetimeDB.
  */
 export function parseMoneyLink(
   raw: string,
@@ -47,7 +47,7 @@ export function parseMoneyLink(
     };
   }
 
-  // Bare handle → transfer shape (payout intent default)
+  // Bare handle â†’ transfer shape (payout intent default)
   if (/^@?[A-Za-z0-9_]{1,15}$/.test(text)) {
     const handle = text.replace(/^@/, "");
     return {
@@ -106,7 +106,7 @@ export function parseMoneyLink(
   };
 }
 
-/** Dry-run payout intent — no settle, no STDB required. */
+/** Dry-run payout intent â€” no settle, no STDB required. */
 export function buildDryRunIntent(
   link: MoneyLinkResolve,
   opts?: { amountUsd?: number; fromWallet?: string },
@@ -123,6 +123,6 @@ export function buildDryRunIntent(
     amountUsd: opts?.amountUsd ?? null,
     asset: "USDC",
     fromWallet: opts?.fromWallet ?? null,
-    note: "Augment-08 beta dry-run — no USDC moved; SpacetimeDB not required",
+    note: "Augment-08 beta dry-run â€” no USDC moved; SpacetimeDB not required",
   };
 }

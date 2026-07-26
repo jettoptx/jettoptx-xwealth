@@ -3,7 +3,7 @@
  * Compatible with Hermes / OpenClaw style agent graphs
  *
  * Live settle is NOT implemented. Dry-run only until operator LIVE + signer.
- * SpacetimeDB is optional later — not required for this node.
+ * SpacetimeDB is optional later â€” not required for this node.
  */
 
 import { parseMoneyLink } from "../x-money-link.js";
@@ -12,7 +12,7 @@ export interface PayoutNodeConfig {
   recipientHandle: string;
   amount: number;
   currency?: "USD" | "SOL" | "JTX" | "USDC";
-  /** e.g. https://x.com/i/money/pay/JoshuaJett or /transfer/… */
+  /** e.g. https://x.com/i/money/pay/demo_user or /transfer/â€¦ */
   transferLink?: string;
 }
 
@@ -58,7 +58,7 @@ export function createPayoutNode(config: PayoutNodeConfig) {
         currency: config.currency || "USDC",
         transferUrl: link.transferUrl,
         kind: link.kind,
-        note: "LIVE send requires explicit operator LIVE + local signer — no SpacetimeDB required for dry-run",
+        note: "LIVE send requires explicit operator LIVE + local signer â€” no SpacetimeDB required for dry-run",
       };
     },
   };

@@ -4,9 +4,9 @@
   "product": "jettoptx-xwealth",
   "treasury": {
     "role": "fee_receiver",
-    "label": "OPTX Squads vault",
+    "label": "project fee treasury",
     "solana": "9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7",
-    "notes": "Collection fees for hosted X API proxy / xwealth metered calls land here (USDC preferred; JTX optional). Multisig Squads thr=2 — not a hot agent key."
+    "notes": "Collection fees for hosted X API proxy / xwealth metered calls land here (USDC preferred; JTX optional). Multisig multisig vault — not a hot agent key."
   },
   "default_conversion": {
     "asset": "USDC",

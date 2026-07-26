@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Real dry-run CLI — gate + parse + optional local signer check → intent JSON.
+ * Real dry-run CLI â€” gate + parse + optional local signer check â†’ intent JSON.
  *
  * Usage:
- *   node scripts/dry-run.mjs --to https://x.com/i/money/pay/JoshuaJett --amount 1
- *   node scripts/dry-run.mjs --to JoshuaJett --amount 1 --asset USDC
- *   SOLANA_WALLET=… XWEALTH_KEYPAIR=… node scripts/dry-run.mjs --to … --amount 1
+ *   node scripts/dry-run.mjs --to https://x.com/i/money/pay/demo_user --amount 1
+ *   node scripts/dry-run.mjs --to demo_user --amount 1 --asset USDC
+ *   SOLANA_WALLET=â€¦ XWEALTH_KEYPAIR=â€¦ node scripts/dry-run.mjs --to â€¦ --amount 1
  *
  * LIVE is rejected:
- *   node scripts/dry-run.mjs --to … --amount 1 --live
+ *   node scripts/dry-run.mjs --to â€¦ --amount 1 --live
  *
  * Never prints private keys. Exit 0 = dry-run ok; 1 = blocked/fail; 2 = usage.
  */
@@ -40,7 +40,7 @@ if (has("--help") || has("-h")) {
   --amount <n>          Amount (USDC default)
   --asset USDC|USD      Default USDC
   --wallet <pubkey>     Override SOLANA_WALLET
-  --keypair <path>      Local id.json (XWEALTH_KEYPAIR) — secret never printed
+  --keypair <path>      Local id.json (XWEALTH_KEYPAIR) â€” secret never printed
   --live                Attempt LIVE (always blocked until settle ships)
   --json                Print intent JSON only
 
@@ -81,7 +81,7 @@ if (jsonOnly) {
   console.log("=== xwealth dry-run ===");
   console.log(JSON.stringify(intent, null, 2));
   if (intent.ok) {
-    console.log("\nOK — dry-run intent ready (no funds moved).");
+    console.log("\nOK â€” dry-run intent ready (no funds moved).");
   } else {
     console.log("\nBLOCKED:");
     for (const b of intent.blockers) console.log(" -", b);

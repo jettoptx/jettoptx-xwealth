@@ -1,4 +1,4 @@
-﻿# jettoptx-xwealth
+# jettoptx-xwealth
 
 **Agentic X Money wallet plugin for the OPTX ecosystem** (JOE **Augment-08** / Wealth beta).
 
@@ -10,7 +10,9 @@ Graph-compatible nodes and harness skills so **any coding agent** (Hermes, OpenC
 4. Optional later: route via **AARON Router** / ledger — **not required for beta dry-run**
 5. Dry-run payout intents first; live send is operator-gated later
 
-> **Status:** Augment-08 **beta / dry-run**. **Privy removed**. **SpacetimeDB not required** for gate, parse, UI, or dry-run. Local UI: `OPTX-windows/8-Wealth/xwealth-ui` → `http://127.0.0.1:3001/`.
+> **Status:** Augment-08 **beta / dry-run**. **Privy removed**. **SpacetimeDB not required**.  
+> **Install:** [INSTALL.md](./INSTALL.md) · **Repos:** [REPOS.md](./REPOS.md) · **Roadmap:** [ROADMAP.md](./ROADMAP.md) · **Grok:** [GROK-PLUGIN.md](./GROK-PLUGIN.md)  
+> **Host (planned):** https://wealth.astroknots.space · brand: jtx.agency · community: [agentcommunity.org/m/jett-optics](https://agentcommunity.org/m/jett-optics)
 
 ---
 
@@ -61,7 +63,7 @@ npm run setup
 ```bash
 export SOLANA_WALLET='<your-solana-pubkey>'
 npm test
-npm run dry-run -- --to https://x.com/i/money/pay/JoshuaJett --amount 1
+npm run dry-run -- --to https://x.com/i/money/pay/demo_user --amount 1
 # ok:true · live:false · settle:false · jtxGate checked on-chain
 ```
 
@@ -70,7 +72,7 @@ npm run dry-run -- --to https://x.com/i/money/pay/JoshuaJett --amount 1
 ```powershell
 $env:SOLANA_WALLET = '<your-solana-pubkey>'
 npm test
-npm run dry-run -- --to https://x.com/i/money/pay/JoshuaJett --amount 1
+npm run dry-run -- --to https://x.com/i/money/pay/demo_user --amount 1
 ```
 
 Full demo script + **where to get the key file**: [`DEMO.md`](./DEMO.md) · what’s next: [`NEXT.md`](./NEXT.md)
@@ -84,18 +86,18 @@ solana-keygen new --outfile ~/.config/solana/xwealth-agent.json --no-bip39-passp
 export SOLANA_WALLET="$(solana-keygen pubkey ~/.config/solana/xwealth-agent.json)"
 export XWEALTH_KEYPAIR="$HOME/.config/solana/xwealth-agent.json"
 # fund SOLANA_WALLET with ≥1 JTX, then:
-npm run dry-run -- --to JoshuaJett --amount 1
+npm run dry-run -- --to demo_user --amount 1
 ```
 
 - Secret stays in that JSON file (gitignored patterns cover `id.json` / key material).
 - If default `~/.config/solana/id.json` is a **different** pubkey, dry-run still passes with a **warning**.
 - **Never paste private keys into chat or the repo.**
 
-Optional X identity (same Jett Optics app as Hermes x-operator / bookmarks):
+Optional X identity (Jett Optical Encryption app — public client id only):
 
 ```bash
 export X_CLIENT_ID=TFhKZW9KTmVxM3loTzd5ZEViVEU6MTpjaQ
-# user tokens from console Generate or oauth_bookmarks.py — never commit secrets
+# user tokens / client secret: server-only — never commit
 ```
 
 ### Agentcard + MCP (any agent that downloads this app)
@@ -166,7 +168,7 @@ Also mirrored below for one-shot paste.
 | **Pi / other** | Tool “system” / “custom instructions” field; same text |
 | **Continue / Aider / Cline** | Custom system prompt or `.continuerc` / rules file |
 
-Replace `{OPTX_HARNESS}` with the absolute path to the dual-clone root (e.g. `C:\Users\joshu\optx-harness` or `$HOME/optx-harness`).
+Replace `{OPTX_HARNESS}` with the absolute path to the dual-clone root (e.g. `$HOME/optx-harness` or `$HOME/optx-harness`).
 
 #### Copy-paste — universal system prompt
 
@@ -192,13 +194,13 @@ If missing, stop and run (or instruct the user to run):
   git clone https://github.com/jettoptx/jettoptx-aaron-router.git
 
 Related local UI (optional, Josh Windows):
-  OPTX-windows/8-Wealth/xwealth-ui → http://127.0.0.1:3001/
+- Public UI (planned): **https://wealth.astroknots.space**- Public UI (planned): **https://wealth.astroknots.space**
 
 ## Identity & auth
 
 1. Product auth is **no Privy**. Required: Solana wallet + **≥1 JTX**. Optional: Jett Optics X OAuth app 32724640.
 2. Identity keys: Solana wallet (gate) + optional X user id/handle.
-3. Client env: VITE_SOLANA_WALLET / SOLANA_WALLET. Never put X_CLIENT_SECRET in the client. Fee treasury: 9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7.
+3. Client env: VITE_SOLANA_WALLET / SOLANA_WALLET. Never put X_CLIENT_SECRET in the client. Fee treasury: see crypto-rails.json / FEE_RECEIVER_SOLANA.
 
 ## Money & safety rules (non-negotiable)
 
@@ -274,7 +276,7 @@ X Wealth does **not** use Privy. After clone:
 
 1. User sets a **Solana wallet pubkey** (`SOLANA_WALLET` or `~/.xwealth/wallet.json`)
 2. Plugin runs **`npm run setup`** → RPC check for **≥ 1 JTX v2**
-3. Optional: **X OAuth** via the **Jett Optical Encryption** developer app (same app as Hermes x-operator / JettChat X surface)
+3. Optional: **X OAuth** via the **Jett Optical Encryption** developer app (same app as product X surfaces)
 
 ### Auth model
 
@@ -389,7 +391,7 @@ const plugin = new XWealthPlugin({
 
 // Graph node (scaffold — dry-run until live is enabled)
 const payoutNode = plugin.createPayoutNode({
-  recipientHandle: "JoshuaJett",
+  recipientHandle: "demo_user",
   amount: 5.0,
   currency: "USD",
 });
@@ -460,7 +462,7 @@ description: >
 ## Paths
 - Plugin: `$OPTX_HARNESS/jettoptx-xwealth`
 - AARON: `$OPTX_HARNESS/jettoptx-aaron-router`
-- Local UI: `OPTX-windows/8-Wealth/xwealth-ui` → http://127.0.0.1:3001/
+- Public UI (planned): **https://wealth.astroknots.space**- Public UI (planned): **https://wealth.astroknots.space**
 
 ## Procedure
 1. Confirm wallet + JTX gate (optional X identity).
@@ -488,7 +490,7 @@ Copy-Item "$env:USERPROFILE\optx-harness\jettoptx-xwealth\skills\xwealth\SKILL.m
 ## Local UI (Canvas UI shell)
 
 ```powershell
-cd C:\Users\joshu\OPTX-windows\8-Wealth\xwealth-ui
+cd /path/to/xwealth-ui
 npm install
 npm run dev
 # → http://127.0.0.1:3001/

@@ -101,5 +101,5 @@ if (!gate.ok) {
 
 console.log('\nPlugin READY — dry-run tools unlocked for this wallet.')
 console.log('Optional next: X OAuth (same Jett Optics app) for X-linked actions:')
-console.log('  set X_BOOKMARKS_* / user tokens, or run Hermes x-operator oauth flow')
+console.log('  set X_BOOKMARKS_* / user tokens, or run server-side X OAuth token flow')
 process.exit(0)
