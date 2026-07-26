@@ -350,7 +350,7 @@ python aaron_router.py # default :8888
 ```python
 from sdk.python.aaron_client import AaronClient
 
-client = AaronClient("http://127.0.0.1:8888")  # or public AARON base
+client = AaronClient("https://aaron.jettoptics.ai")  # or public AARON base
 session = client.create_session(wallet_address="YOUR_SOLANA_PUBKEY")
 status = client.poll_session(session["sessionId"])
 ```
@@ -360,7 +360,7 @@ status = client.poll_session(session["sessionId"])
 ```typescript
 import { AaronClient } from "./sdk/typescript/aaron-client";
 
-const aaron = new AaronClient("http://127.0.0.1:8888");
+const aaron = new AaronClient("https://aaron.jettoptics.ai");
 const session = await aaron.createSession({ walletAddress: "YOUR_PUBKEY" });
 const result = await aaron.waitForVerification(session.sessionId);
 ```
@@ -493,7 +493,7 @@ Copy-Item "$env:USERPROFILE\optx-harness\jettoptx-xwealth\skills\xwealth\SKILL.m
 cd /path/to/xwealth-ui
 npm install
 npm run dev
-# → http://127.0.0.1:3001/
+# → https://wealth.astroknots.space
 ```
 
 - **Liquid** hero + **GlassObject** QR panel (Canvas UI / shadcn registry `@canvas-ui`)
