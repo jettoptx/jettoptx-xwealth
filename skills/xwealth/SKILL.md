@@ -77,7 +77,24 @@ cd jettoptx-xwealth && npm install && npm run setup
 
 ## Local UI
 
-`OPTX-windows/8-Wealth/xwealth-ui` → http://127.0.0.1:5180/
+`OPTX-windows/8-Wealth/xwealth-ui` → http://127.0.0.1:3001/
+
+## Agentcard (virtual cards + MCP)
+
+For any agent that downloads this repo:
+
+```bash
+npm run agent-cards:setup
+# after human login:
+npm run agent-cards:wizard
+# or:
+npx agent-cards companies wizard --agent --yes --app-name "X Wealth" --app-url http://localhost:3001
+```
+
+- Skills land in `.agents/skills/` (`agent-card`, `mcp-server`)
+- MCP example: `agent-cards/mcp.agent-cards.example.json`
+- **Crypto default:** convert / cash-out as **USDC** on **Solana** or **Base** (`agent-cards/crypto-rails.json`)
+- Cards are live money — require human confirm before create/withdraw/checkout
 
 ## Do not
 

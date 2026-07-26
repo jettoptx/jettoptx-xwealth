@@ -1,0 +1,7 @@
+{
+  "product": "jettoptx-xwealth",
+  "at": "2026-07-26T16:42:27.302Z",
+  "cryptoDefault": "USDC on Solana or Base",
+  "signedIn": false,
+  "next": "npx agent-cards login --email <email>"
+}

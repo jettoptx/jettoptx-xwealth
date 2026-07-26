@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "agent-cards": {
+      "url": "https://mcp.agentcard.sh/mcp",
+      "headers": {
+        "Authorization": "Bearer ${AGENT_CARDS_JWT}"
+      }
+    },
+    "agent-cards-cli": {
+      "command": "npx",
+      "args": ["-y", "agent-cards", "api", "--agent-help"],
+      "_comment": "Prefer remote mcp.agentcard.sh; use CLI after `agent-cards login` or AGENT_CARDS_JWT"
+    }
+  },
+  "_optx": {
+    "product": "jettoptx-xwealth",
+    "crypto_default": "USDC on Solana or Base",
+    "ui": "http://localhost:3001",
+    "wizard": "npx agent-cards companies wizard --agent --yes --app-name \"X Wealth\" --app-url http://localhost:3001"
+  }
+}

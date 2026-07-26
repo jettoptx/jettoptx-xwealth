@@ -1,0 +1,40 @@
+{
+  "$schema": "https://jettoptx.dev/schemas/xwealth-crypto-rails.json",
+  "version": "1.0.0",
+  "product": "jettoptx-xwealth",
+  "default_conversion": {
+    "asset": "USDC",
+    "chains": ["solana", "base"],
+    "preferred_order": ["solana", "base"],
+    "notes": "Any agent converting fiat or other crypto for X Wealth defaults to USDC on Solana or Base."
+  },
+  "assets": {
+    "USDC": {
+      "solana": {
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "decimals": 6,
+        "symbol": "USDC"
+      },
+      "base": {
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "decimals": 6,
+        "symbol": "USDC",
+        "chainId": 8453,
+        "agentcard_withdraw": "agent-cards withdraw --amount <usd> --to <0xAddress>"
+      }
+    },
+    "JTX": {
+      "solana": {
+        "mint": "JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe",
+        "role": "product_gate",
+        "min_ui_amount": 1
+      }
+    }
+  },
+  "agentcard": {
+    "cli": "npx agent-cards",
+    "companies_wizard": "npx agent-cards companies wizard --agent --yes --app-name \"X Wealth\" --app-url http://localhost:3001",
+    "fiat_unit": "USD",
+    "crypto_cashout_default": "USDC_BASE"
+  }
+}

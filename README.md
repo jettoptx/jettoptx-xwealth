@@ -63,6 +63,24 @@ export X_CLIENT_ID=TFhKZW9KTmVxM3loTzd5ZEViVEU6MTpjaQ
 # user tokens from console Generate or oauth_bookmarks.py — never commit secrets
 ```
 
+### Agentcard + MCP (any agent that downloads this app)
+
+```bash
+npm run agent-cards:setup
+# Human once: npx agent-cards login --email you@…
+npx agent-cards companies wizard --agent --yes \
+  --app-name "X Wealth" \
+  --app-url http://localhost:3001
+```
+
+| Default crypto conversion | **USDC** on **Solana** or **Base** |
+|---------------------------|-------------------------------------|
+| Policy file | [`agent-cards/crypto-rails.json`](agent-cards/crypto-rails.json) |
+| MCP example | [`agent-cards/mcp.agent-cards.example.json`](agent-cards/mcp.agent-cards.example.json) |
+| Full guide | [`agent-cards/README.md`](agent-cards/README.md) |
+
+Agentcard withdraw-to-crypto: `npx agent-cards withdraw --amount 25 --to 0x…` (**USDC on Base**). Solana USDC mint for OPTX rails: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`.
+
 ---
 
 ## Required downloads (agent harness)
