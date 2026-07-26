@@ -497,7 +497,8 @@ Public write path when ready: **AARON** → STDB reducers (same pattern as JettC
 
 - **No live money** in v0 without explicit operator mode  
 - **No private keys** in agent chat or browser `localStorage` dumps  
-- **X OAuth only** on the X Wealth surface (do not re-enable email login in client config)  
+- **No Privy** — wallet + JTX gate; optional X OAuth only when needed for X API  
+
 - JTX gate is **read-only balance check** until stake SC exists  
 - VLM: structured JSON only; refuse non–X Money images  
 
@@ -505,13 +506,14 @@ Public write path when ready: **AARON** → STDB reducers (same pattern as JettC
 
 ## Roadmap checklist
 
-- [x] Repo + this README (harness + Privy X-only + dual clone)
-- [x] Local UI prototype (`xwealth-ui`) + Canvas UI Liquid / GlassObject
-- [ ] Privy X-only provider wired into `xwealth-ui`
-- [ ] Ingest API: paste + classic QR + Grok Vision
-- [ ] Real `checkJtxGate` via Solana RPC
+- [x] Repo + README (wallet + JTX gate, **no Privy**)
+- [x] Local UI prototype (`xwealth-ui` :3001) + Asciify
+- [x] Real `checkJtxGate` via Solana RPC + `npm run setup`
+- [x] Hermes skill package under `skills/xwealth`
+- [x] Fee treasury documented (Squads `9Wss…6YD7`)
+- [ ] Ingest API polish: paste + classic QR + Grok Vision
 - [ ] SpacetimeDB reducers + AARON bindings
-- [ ] Hermes skill package under `skills/xwealth`
+- [ ] Hosted X API proxy + metered fee to treasury
 - [ ] Publish `@jettoptx/xwealth` with real graph nodes
 - [ ] Live X Money send (operator + policy)
 
