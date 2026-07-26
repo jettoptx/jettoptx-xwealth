@@ -8,8 +8,12 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "echo \"TODO\" && exit 0",
+    "setup": "node scripts/setup-plugin.mjs",
     "check-wallet": "node scripts/check-wallet.mjs",
-    "check-jtx": "node scripts/check-jtx-gate.mjs"
+    "check-jtx": "node scripts/check-jtx-gate.mjs",
+    "agent-cards:setup": "node scripts/agent-cards-setup.mjs",
+    "agent-cards:wizard": "npx -y agent-cards companies wizard --agent --yes --app-name \"X Wealth\" --app-url http://localhost:3001 --path .",
+    "agent-cards:mcp-help": "npx -y agent-cards setup-mcp --help"
   },
   "keywords": [
     "optx",
