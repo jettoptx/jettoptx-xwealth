@@ -2,6 +2,20 @@
 
 Any coding agent that clones **jettoptx-xwealth** can provision virtual cards + MCP via [Agentcard](https://agentcard.sh) (`npx agent-cards`).
 
+## Fee treasury (canonical)
+
+| Role | Address |
+|------|---------|
+| **Collection fees / X API markup** | `9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7` |
+| Type | OPTX **Squads vault** (multisig thr≈2) |
+| Asset | Prefer **USDC** (Solana mint below) |
+
+```bash
+export FEE_RECEIVER_SOLANA=9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7
+```
+
+Hosted X API proxy should send metered fees here so app `32724640` credit burn is offset. Do **not** use a single hot key for treasury.
+
 ## Default crypto rails (OPTX policy)
 
 | Prefer | Chain | Asset | Notes |
@@ -9,6 +23,7 @@ Any coding agent that clones **jettoptx-xwealth** can provision virtual cards + 
 | **Default settlement** | **Solana** or **Base** | **USDC** | Fiat ↔ crypto conversion defaults to USDC |
 | Solana USDC mint | Solana | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` | Same ecosystem as JTX gate |
 | Base USDC | Base | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | Agentcard `withdraw --to <0x…>` |
+| **Fee receiver** | Solana | `9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7` | Squads vault |
 
 - **Do not** invent random stablecoins. Convert / cash-out path is **USDC** on **Solana** or **Base** unless Josh overrides in session.
 - Agentcard native withdraw-to-crypto today: **USDC on Base** (`agent-cards withdraw --amount N --to 0x…`).

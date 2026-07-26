@@ -60,6 +60,19 @@ cp skills/xwealth/SKILL.md ~/.grok/skills/xwealth/SKILL.md
    - Same app as Hermes x-operator / JettChat X surface
 3. X OAuth does **not** create a Solana key — wallet is always separate
 
+## Fee treasury (hosted X API / metered proxy)
+
+Hosted calls that hit **your** X app credits should collect a small fee (USDC preferred) to:
+
+```text
+9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7
+```
+
+- Label: **OPTX Squads vault** (multisig — not a hot agent key)
+- Env: `FEE_RECEIVER_SOLANA=9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7`
+- Policy: `agent-cards/crypto-rails.json` → `treasury` + `x_api_fee`
+- Free path: paste-only X Money link parse (no `api.x.com`) — no fee
+
 ```bash
 export SOLANA_WALLET='<pubkey>'
 cd jettoptx-xwealth && npm install && npm run setup

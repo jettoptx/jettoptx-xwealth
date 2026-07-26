@@ -1,12 +1,26 @@
 {
   "$schema": "https://jettoptx.dev/schemas/xwealth-crypto-rails.json",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "product": "jettoptx-xwealth",
+  "treasury": {
+    "role": "fee_receiver",
+    "label": "OPTX Squads vault",
+    "solana": "9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7",
+    "notes": "Collection fees for hosted X API proxy / xwealth metered calls land here (USDC preferred; JTX optional). Multisig Squads thr=2 — not a hot agent key."
+  },
   "default_conversion": {
     "asset": "USDC",
     "chains": ["solana", "base"],
     "preferred_order": ["solana", "base"],
     "notes": "Any agent converting fiat or other crypto for X Wealth defaults to USDC on Solana or Base."
+  },
+  "x_api_fee": {
+    "receiver_solana": "9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7",
+    "asset": "USDC",
+    "mint_solana": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "markup_min": 2.0,
+    "floor_usd": 0.002,
+    "env": "FEE_RECEIVER_SOLANA"
   },
   "assets": {
     "USDC": {
@@ -35,6 +49,8 @@
     "cli": "npx agent-cards",
     "companies_wizard": "npx agent-cards companies wizard --agent --yes --app-name \"X Wealth\" --app-url http://localhost:3001",
     "fiat_unit": "USD",
-    "crypto_cashout_default": "USDC_BASE"
+    "crypto_cashout_default": "USDC_BASE",
+    "optional": true
   }
 }
+

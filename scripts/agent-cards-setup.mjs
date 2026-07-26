@@ -37,6 +37,8 @@ if (existsSync(railsPath)) {
   console.log(
     JSON.stringify(
       {
+        treasury: rails.treasury,
+        x_api_fee: rails.x_api_fee,
         default_conversion: rails.default_conversion,
         usdc_solana: rails.assets.USDC.solana.mint,
         usdc_base: rails.assets.USDC.base.address,
