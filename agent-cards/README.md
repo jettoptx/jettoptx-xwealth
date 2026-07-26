@@ -25,7 +25,7 @@ Hosted X API proxy should send metered fees here so app `32724640` credit burn i
 | Base USDC | Base | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | Agentcard `withdraw --to <0x…>` |
 | **Fee receiver** | Solana | `9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7` | Squads vault |
 
-- **Do not** invent random stablecoins. Convert / cash-out path is **USDC** on **Solana** or **Base** unless Josh overrides in session.
+- **Do not** invent random stablecoins. Convert / cash-out path is **USDC** on **Solana** or **Base** unless the operator overrides in session.
 - Agentcard native withdraw-to-crypto today: **USDC on Base** (`agent-cards withdraw --amount N --to 0x…`).
 - Solana USDC for X Wealth / AARON / JTX-adjacent rails uses the mint above via your wallet tooling — keep amounts in **USD units** when talking to Agentcard cards.
 

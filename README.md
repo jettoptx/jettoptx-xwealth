@@ -193,14 +193,15 @@ If missing, stop and run (or instruct the user to run):
   git clone https://github.com/jettoptx/jettoptx-xwealth.git
   git clone https://github.com/jettoptx/jettoptx-aaron-router.git
 
-Related local UI (optional, Josh Windows):
-- Public UI (planned): **https://wealth.astroknots.space**- Public UI (planned): **https://wealth.astroknots.space**
+Public UI (when deployed): **https://wealth.astroknots.space**
+Docs / install: [INSTALL.md](./INSTALL.md) · [ROADMAP.md](./ROADMAP.md)
 
 ## Identity & auth
 
 1. Product auth is **no Privy**. Required: Solana wallet + **≥1 JTX**. Optional: Jett Optics X OAuth app 32724640.
 2. Identity keys: Solana wallet (gate) + optional X user id/handle.
-3. Client env: VITE_SOLANA_WALLET / SOLANA_WALLET. Never put X_CLIENT_SECRET in the client. Fee treasury: see crypto-rails.json / FEE_RECEIVER_SOLANA.
+3. Client env: `SOLANA_WALLET` / `VITE_SOLANA_WALLET`. Never put `X_CLIENT_SECRET` in the client.
+   Fee treasury: see `crypto-rails.json` / `FEE_RECEIVER_SOLANA`.
 
 ## Money & safety rules (non-negotiable)
 
@@ -210,37 +211,34 @@ Related local UI (optional, Josh Windows):
    Signing stays device-side / AARON — not in chat.
 3. JTX gate: wallet must hold **≥ 1** JTX v2:
    mint `JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe`
-4. Sole product database is **not required for beta**. Do not invent Postgres/Convex/Supabase for this flow. SpacetimeDB is **optional later** for ledgers only.
-   as source of truth. Prefer AARON → STDB reducers when writing.
-5. Do not merge X Wealth into `jettoptx-jtx-trade` or treat traderjoe SPCX trading
-   as the same rail as X Money P2P (related Augment-08, separate surfaces).
+4. **No database required for beta.** Do not invent Postgres/Convex/Supabase for this flow.
+   Optional ledger later is not a beta blocker.
+5. X Money P2P intents are a **separate product surface** from other trading tools — do not
+   conflate them in the same agent rail.
 
 ## Ingest order (do not invert)
 
-1. **Paste** `https://x.com/i/money/transfer/{handle}` when available (best).
-2. **Classic QR decode** (jsQR / zxing) on a sharp image — prefer **phone photo**
-   of the live X Money QR over soft web screenshots.
-3. **Grok Vision / JOE multimodal (VLM)** only if 1–2 fail or confidence is low.
+1. **Paste** `https://x.com/i/money/pay/{handle}` or `/transfer/{handle}` (best).
+2. **Classic QR decode** (jsQR / zxing) on a sharp image — prefer a clear photo of the live QR.
+3. **VLM fallback** only if 1–2 fail or confidence is low.
    Return structured JSON: { transferUrl, handle, amount?, currency?, confidence, method }.
    Refuse non–X Money images with a clear error.
 
 ## Preferred workflows by harness
 
-- **Hermes**: load skill `xwealth`; use MCP (AARON/Hedgehog) when configured; never auto-send.
-- **Grok Build**: follow this file + `skills/xwealth/SKILL.md`; use shadcn MCP for @canvas-ui;
-  local UI at :3001; shell into traderjoe only for SPCX Tier A, not X Money.
-- **Claude Code / Codex**: treat this repo + aaron-router as the workspace roots; implement
-  ingest API, gate, STDB reducers; keep dry-run default.
-- **Cursor**: same as Claude Code; use project rules; Hyperbrowser only for public UI scrape,
-  not for moving funds.
-- **OpenClaw / Pi / others**: attach this prompt as system; graph nodes from `@jettoptx/xwealth`
-  when published; approval gate before any execute node.
+- **Hermes**: load skill `xwealth`; never auto-send.
+- **Grok Build**: `grok plugin install jettoptx/jettoptx-xwealth --trust` or this repo’s skill;
+  follow `skills/xwealth/SKILL.md` and [GROK-PLUGIN.md](./GROK-PLUGIN.md).
+- **Claude Code / Codex**: treat this repo (+ optional aaron-router) as workspace roots;
+  keep dry-run default.
+- **Cursor**: same; Hyperbrowser only for public UI scrape, not for moving funds.
+- **OpenClaw / Pi / others**: attach this prompt as system; approval gate before any execute node.
 
 ## Implementation priorities (when asked to build)
 
-P0: ingest (paste + QR + VLM) · wallet+JTX setup · dry-run intent · README/skills
-P1: real JTX RPC gate · SpacetimeDB reducers via AARON · Hermes/Grok skill install
-P2: live send behind operator allowlist · publish @jettoptx/xwealth dist
+P0: ingest (paste + QR + VLM) · wallet+JTX setup · dry-run intent · docs/skills  
+P1: public host (wealth.astroknots.space) · Grok marketplace · Hermes skill install  
+P2: live send behind operator allowlist · publish `@jettoptx/xwealth` dist
 
 ## Response style
 
@@ -560,12 +558,15 @@ Public write path when ready: **AARON** → STDB reducers (same pattern as JettC
 
 ## Related
 
-| Repo / surface | Role |
-|----------------|------|
-| [jettoptx-aaron-router](https://github.com/jettoptx/jettoptx-aaron-router) | Public router, SDKs, session, x402 |
-| [jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth) | This plugin |
-| JettChat / X OAuth | Shared Jett Optics X app `32724640` for optional identity |
-| Local `8-Wealth/traderjoe` | Wealth-08 trading brain (SPCX) — **separate** from X Money rails |
-| Local `8-Wealth/xwealth-ui` | Canvas UI localhost shell |
+| Surface | Role |
+|---------|------|
+| [jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth) | This plugin (public install) |
+| [jettoptx-aaron-router](https://github.com/jettoptx/jettoptx-aaron-router) | Optional public edge router / sessions / x402 |
+| **https://wealth.astroknots.space** | Planned product UI host |
+| **jtx.agency** | Parked brand / marketing |
+| [agentcommunity.org/m/jett-optics](https://agentcommunity.org/m/jett-optics) | Community presence |
+| X app **Jett Optical Encryption** (`32724640`) | Optional OAuth / X API identity |
 
-MIT License — Jett Optics / OPTX
+See [REPOS.md](./REPOS.md) for public vs private org matrix.
+
+MIT License — Jett Optical Technologies / OPTX
