@@ -8,6 +8,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "echo \"TODO\" && exit 0",
+    "setup": "node scripts/setup-plugin.mjs",
     "check-wallet": "node scripts/check-wallet.mjs",
     "check-jtx": "node scripts/check-jtx-gate.mjs"
   },

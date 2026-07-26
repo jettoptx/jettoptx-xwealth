@@ -1,16 +1,16 @@
-# jettoptx-xwealth
+﻿# jettoptx-xwealth
 
 **Agentic X Money wallet plugin for the OPTX ecosystem** (JOE **Augment-08** / Wealth beta).
 
 Graph-compatible nodes and harness skills so **any coding agent** (Hermes, OpenClaw, Grok Build, Claude Code, Codex, Cursor, Pi, etc.) can:
 
-1. **Sign in** via a **Jett Optics–style Privy app forced to X (Twitter) OAuth only**
+1. **Auth without Privy** — Solana wallet + **JTX ≥ 1** gate; optional **Jett Optics X OAuth** app for X identity
 2. **Ingest** X Money transfer QR / links (`https://x.com/i/money/transfer/{handle}`) via classic QR decode + **Grok Vision**
-3. **Gate** on **JTX v2** (`≥ 1` token)
+3. **Gate** on **JTX v2** (`≥ 1` token) via Solana RPC
 4. Route public actions through **AARON Router** + record state in **SpacetimeDB**
 5. Dry-run payout intents first; live send is operator-gated later
 
-> **Status:** Scaffold + product README. Package API is still in progress. Local UI prototype: `OPTX-windows/8-Wealth/xwealth-ui` → `http://127.0.0.1:5180/`.
+> **Status:** Scaffold + product README. **Privy removed** — use wallet + JTX gate (+ optional X OAuth). Local UI prototype: `OPTX-windows/8-Wealth/xwealth-ui` → `http://127.0.0.1:5180/`.
 
 ---
 
@@ -24,6 +24,44 @@ Graph-compatible nodes and harness skills so **any coding agent** (Hermes, OpenC
 | **This plugin** | [jettoptx/jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth) |
 | **Docs** | https://jettoptx.dev/docs |
 | **Sole product DB** | **SpacetimeDB** (not Postgres / Convex) |
+| **X OAuth app** | **Jett Optical Encryption** · app id `32724640` · [console.x.com](https://console.x.com) |
+| **X Client ID (public)** | `TFhKZW9KTmVxM3loTzd5ZEViVEU6MTpjaQ` |
+| **Auth model** | Wallet + JTX ≥1 (required) · X OAuth (optional identity) · **no Privy** |
+
+---
+
+## Quick start — clone and gate
+
+```bash
+git clone https://github.com/jettoptx/jettoptx-xwealth.git
+cd jettoptx-xwealth
+export SOLANA_WALLET='<your-solana-pubkey>'   # must hold ≥1 JTX
+npm install
+npm run setup     # check-wallet + check-jtx; writes ~/.xwealth/session.json
+```
+
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/jettoptx/jettoptx-xwealth.git
+cd jettoptx-xwealth
+$env:SOLANA_WALLET = '<your-solana-pubkey>'
+npm install
+npm run setup
+```
+
+| Exit | Meaning |
+|------|---------|
+| `0` | Plugin **ready** — ≥1 JTX |
+| `1` | Gate **fail** — need more JTX |
+| `2` | No wallet configured |
+
+Optional X identity (same Jett Optics app as Hermes x-operator / bookmarks):
+
+```bash
+export X_CLIENT_ID=TFhKZW9KTmVxM3loTzd5ZEViVEU6MTpjaQ
+# user tokens from console Generate or oauth_bookmarks.py — never commit secrets
+```
 
 ---
 
@@ -178,90 +216,69 @@ Copy-Item "$env:USERPROFILE\optx-harness\jettoptx-xwealth\skills\xwealth\SKILL.m
 
 ---
 
-## Auth: Jett Optics Privy, **forced X OAuth**
+## Auth: Jett Optics X app + JTX gate (**no Privy**)
 
-JettChat / jettoptics uses Privy with Solana embedded wallets. **X Wealth uses the same Privy app family**, but login is **X-only**.
+X Wealth does **not** use Privy. After clone:
 
-### Difference from full JettChat Privy
+1. User sets a **Solana wallet pubkey** (`SOLANA_WALLET` or `~/.xwealth/wallet.json`)
+2. Plugin runs **`npm run setup`** → RPC check for **≥ 1 JTX v2**
+3. Optional: **X OAuth** via the **Jett Optical Encryption** developer app (same app as Hermes x-operator / JettChat X surface)
 
-| | JettChat / DOJO (ref) | **X Wealth (this product)** |
-|--|----------------------|-----------------------------|
-| Provider | Privy | Privy (same app id family) |
-| `loginMethods` | `["email", "twitter"]` (example) | **`["twitter"]` only** |
-| Wallet | Solana embedded + external | Solana embedded on X login |
-| Identity key | Privy DID + X subject | **X user id / handle primary**; Privy DID stored for wallet |
+### Why not Privy?
 
-### Copy-paste — Privy config (React / Next)
+| Old (removed) | New |
+|---------------|-----|
+| Privy App ID + embedded wallet | User-owned Solana pubkey |
+| `loginMethods: ["twitter"]` via Privy | Direct **X OAuth 2.0** Client ID (public) |
+| Privy DID as identity | X user id/handle (optional) + wallet (required) |
 
-```tsx
-// providers/XWealthPrivy.tsx
-"use client";
+### X app (optional identity)
 
-import { PrivyProvider, type PrivyClientConfig } from "@privy-io/react-auth";
-import {
-  defaultSolanaRpcsPlugin,
-  toSolanaWalletConnectors,
-} from "@privy-io/react-auth/solana";
+| Item | Value |
+|------|--------|
+| App name | Jett Optical Encryption |
+| App id | `32724640` |
+| Client ID (public) | `TFhKZW9KTmVxM3loTzd5ZEViVEU6MTpjaQ` |
+| Client Secret | Server / Hermes only — never ship to browser plugin bundles |
+| Console | https://console.x.com/accounts/…/apps/32724640 |
 
-const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
+X OAuth proves **who you are on X**. It does **not** open a Solana wallet. The **JTX gate** always uses the configured Solana address.
 
-/** X Wealth: force X (Twitter) OAuth — no email / SMS / Google. */
-export const XWEALTH_PRIVY_CONFIG: PrivyClientConfig = {
-  embeddedWallets: {
-    solana: { createOnLogin: "users-without-wallets" },
-  },
-  externalWallets: {
-    solana: { connectors: toSolanaWalletConnectors() },
-  },
-  appearance: {
-    walletChainType: "solana-only",
-    theme: "dark",
-    accentColor: "#6d8cff",
-    logo: "/jtx-joe.jpg", // optional brand mark
-  },
-  // FORCE X OAUTH ONLY
-  loginMethods: ["twitter"],
-  plugins: [defaultSolanaRpcsPlugin()],
-};
-
-export function XWealthPrivyProvider({ children }: { children: React.ReactNode }) {
-  if (!PRIVY_APP_ID) {
-    throw new Error("NEXT_PUBLIC_PRIVY_APP_ID is required for X Wealth login");
-  }
-  return (
-    <PrivyProvider appId={PRIVY_APP_ID} config={XWEALTH_PRIVY_CONFIG}>
-      {children}
-    </PrivyProvider>
-  );
-}
-```
-
-### Privy dashboard checklist (human)
-
-1. Open the **Jett Optics / JettChat Privy app** (or a dedicated X Wealth app sharing the same ecosystem).
-2. Enable **Twitter / X** social login.
-3. Disable or leave unused: email / SMS / Google for this product surface (client still forces `loginMethods: ["twitter"]`).
-4. Solana chain enabled; create embedded wallet on login.
-5. Set allowed origins: `http://127.0.0.1:5180`, production X Wealth host, AARON CORS list.
-6. Copy **App ID** → `NEXT_PUBLIC_PRIVY_APP_ID` (never commit App Secret to the client).
-
-### Env (UI / agent host)
+### Env
 
 ```bash
-# Client
-NEXT_PUBLIC_PRIVY_APP_ID=clp_xxxxxxxx
-
-# Server / AARON (never ship to browser)
-PRIVY_APP_SECRET=          # verify sessions server-side if needed
-SOLANA_RPC_URL=            # Helius or AARON-adjacent RPC
-XAI_API_KEY=               # Grok Vision for QR fallback
-AARON_URL=https://aaron.jettoptics.ai   # or local http://127.0.0.1:8888
-SPACETIMEDB_URL=https://stdb.jettoptics.ai
+# Required for gate
+SOLANA_WALLET=<base58 pubkey>
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com   # or Helius
 JTX_MINT=JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe
+
+# Optional X identity (same Jett Optics app)
+X_CLIENT_ID=TFhKZW9KTmVxM3loTzd5ZEViVEU6MTpjaQ
+# X_CLIENT_SECRET=...          # server only
+# X user tokens from console Generate / oauth PKCE — not committed
 ```
 
----
+### Code
 
+```ts
+import { XWealthPlugin } from "@jettoptx/xwealth";
+
+const plugin = new XWealthPlugin();
+const state = await plugin.assertReady(process.env.SOLANA_WALLET!);
+// state.ready === true  →  dry-run tools unlocked
+```
+
+CLI:
+
+```bash
+npm run check-wallet
+npm run check-jtx -- --wallet <PUBKEY>
+npm run setup
+```
+
+Example: [`examples/x-oauth-jtx.ts`](examples/x-oauth-jtx.ts)
+
+---
 ## Install AARON Router (required)
 
 ```bash
