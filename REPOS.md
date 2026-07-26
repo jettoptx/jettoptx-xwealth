@@ -47,4 +47,4 @@ See [GROK-PLUGIN.md](./GROK-PLUGIN.md).
 - Never commit `.env` files, keypairs, or OAuth secrets.  
 - Prefer official `jettoptx/*` sources for production.  
 
-Full steps: [INSTALL.md](./INSTALL.md) · roadmap: [ROADMAP.md](./ROADMAP.md).
+Full steps: [INSTALL.md](./INSTALL.md). Roadmap: [ROADMAP.md](./ROADMAP.md).
