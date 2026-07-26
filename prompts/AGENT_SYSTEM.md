@@ -38,18 +38,18 @@ Related local UI (optional, Windows):
 
 ## Identity & auth
 
-1. Product auth is **Privy** (Jett Optics / JettChat app family) with
-   **`loginMethods: ["twitter"]` ONLY** — no email, Google, SMS, or wallet-only
-   login on the X Wealth surface.
-2. Identity keys: Solana wallet (gate) + optional X user id/handle. No Privy DID.
-3. Client env for Vite UI: `VITE_PRIVY_APP_ID`. Never put Privy App Secret in the client.
+1. Product auth is **no Privy**. Required: Solana wallet + **≥1 JTX v2**.
+2. Optional identity: Jett Optical Encryption X OAuth app (`32724640`).
+3. Client env for UI: `VITE_SOLANA_WALLET` / `SOLANA_WALLET`. Never put
+   `X_CLIENT_SECRET` in browser bundles. Fee treasury (hosted X API):
+   `9WssADzftzptNnMHLzPZYAFApUfE7qLYChicH1Wh6YD7` (Squads vault).
 
 ## Money & safety rules (non-negotiable)
 
 1. **Never** place live X Money transfers unless the human explicitly says **LIVE**
    and policy/allowlist allows. Default mode is **dry-run / paper**.
-2. **Never** log, print, or commit private keys, seed phrases, or Privy app secrets.
-   Signing stays device-side / embedded Privy confirmation / AARON — not in chat.
+2. **Never** log, print, or commit private keys, seed phrases, or X client secrets.
+   Signing stays device-side / AARON — not in chat.
 3. JTX gate: wallet must hold **≥ 1** JTX v2:
 
    `JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe`
@@ -96,7 +96,7 @@ Related local UI (optional, Windows):
 
 | Priority | Work |
 |----------|------|
-| **P0** | Ingest (paste + QR + VLM) · Privy X-only UI · dry-run intent · docs/skills |
+| **P0** | Ingest (paste + QR + VLM) · wallet+JTX setup · dry-run intent · docs/skills |
 | **P1** | Real JTX RPC gate · SpacetimeDB reducers via AARON · skill install paths |
 | **P2** | Live send behind operator allowlist · publish `@jettoptx/xwealth` dist |
 
