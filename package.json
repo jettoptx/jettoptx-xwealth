@@ -4,10 +4,18 @@
   "description": "Agentic X Money wallet plugin for OPTX — graph nodes for Hermes/OpenClaw, JTX v2 gated, Solana + X payments",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "echo \"TODO\" && exit 0",
+    "test": "npm run build && node --test test/**/*.mjs",
+    "dry-run": "npm run build && node scripts/dry-run.mjs",
     "setup": "node scripts/setup-plugin.mjs",
     "check-wallet": "node scripts/check-wallet.mjs",
     "check-jtx": "node scripts/check-jtx-gate.mjs",

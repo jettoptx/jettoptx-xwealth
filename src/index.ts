@@ -3,7 +3,7 @@
  * Agentic X Money + Solana wallet plugin for OPTX agent harnesses.
  *
  * Auth: Jett Optics X OAuth app (optional identity) + Solana wallet + JTX ≥1 gate.
- * No Privy.
+ * No Privy. No SpacetimeDB required for gate / link parse / dry-run.
  */
 
 import {
@@ -21,6 +21,12 @@ import {
   type XSession,
   type WalletSession,
 } from "./auth.js";
+import {
+  parseMoneyLink,
+  buildDryRunIntent,
+  type MoneyLinkResolve,
+} from "./x-money-link.js";
+import { createPayoutNode as createPayoutNodeDef } from "./nodes/payout.js";
 
 export {
   checkJtxGate,
@@ -38,6 +44,24 @@ export {
   type XSession,
   type WalletSession,
 } from "./auth.js";
+
+export {
+  parseMoneyLink,
+  buildDryRunIntent,
+  type MoneyLinkResolve,
+  type MoneyLinkKind,
+} from "./x-money-link.js";
+
+export { createPayoutNode as createPayoutNodeFactory } from "./nodes/payout.js";
+
+export { runDryRun, type RunDryRunOptions } from "./dry-run.js";
+export { signerSnapshot, inspectSigner, type SignerPublicInfo } from "./signer.js";
+export type {
+  PayoutIntent,
+  DryRunRequest,
+  IntentMode,
+  PayoutAsset,
+} from "./intent.js";
 
 export interface XWealthConfig {
   jtxMint?: string;
@@ -149,30 +173,77 @@ export class XWealthPlugin {
     };
   }
 
-  /** Create a graph-compatible payout node (dry-run until LIVE). */
-  createPayoutNode(opts: {
+  /** Parse X Money pay/transfer URL or bare handle (no network). */
+    parseLink(raw: string, method: MoneyLinkResolve["method"] = "paste") {
+      return parseMoneyLink(raw, method);
+    }
+
+    /**
+     * Full dry-run pipeline (gate + link + optional local signer check).
+     * LIVE is hard-blocked. Never returns secrets.
+     */
+    async dryRun(req: {
+      to: string;
+      amount: number;
+      asset?: import("./intent.js").PayoutAsset;
+      mode?: import("./intent.js").IntentMode;
+      liveConfirm?: string;
+      keypairPath?: string;
+      wallet?: string;
+    }) {
+      const { runDryRun } = await import("./dry-run.js");
+      return runDryRun({
+        ...req,
+        wallet:
+          req.wallet?.trim() ||
+          this.walletSession?.wallet ||
+          process.env.SOLANA_WALLET ||
+          process.env.XWEALTH_WALLET,
+        rpcUrl: this.config.rpcUrl,
+      });
+    }
+
+    /** Create a graph-compatible payout node (dry-run until LIVE). */
+    createPayoutNode(opts: {
     recipientHandle: string;
     amount: number;
     currency?: string;
+    transferLink?: string;
   }) {
+    const link = parseMoneyLink(
+      opts.transferLink || opts.recipientHandle,
+      opts.transferLink ? "paste" : "unknown",
+    );
+    const node = createPayoutNodeDef({
+      recipientHandle: opts.recipientHandle,
+      amount: opts.amount,
+      currency: (opts.currency as "USDC") || "USDC",
+      transferLink: opts.transferLink || link.transferUrl || undefined,
+    });
     return {
       id: "xwealth-payout",
       type: "payout",
       input: opts,
+      link,
       execute: async () => {
         const ready = await this.assertReady();
         if (!ready.ready) {
           throw new Error(`X Wealth locked: ${ready.message}`);
         }
-        // Dry-run only in scaffold
-        return {
-          mode: "dry-run",
-          recipientHandle: opts.recipientHandle,
+        const body = await node.execute({
           amount: opts.amount,
-          currency: opts.currency || "USD",
+          recipientHandle: opts.recipientHandle,
+        });
+        return {
+          ...body,
+          mode: "dry-run",
           wallet: ready.wallet?.wallet,
           jtxUiAmount: ready.jtxUiAmount,
-          note: "LIVE send requires explicit operator LIVE + policy allowlist",
+          intent: buildDryRunIntent(link, {
+            amountUsd: opts.amount,
+            fromWallet: ready.wallet?.wallet,
+          }),
+          note: "LIVE send requires explicit operator LIVE + local signer — SpacetimeDB not required",
         };
       },
     };

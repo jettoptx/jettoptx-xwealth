@@ -3,9 +3,9 @@ name: xwealth
 description: >
   X Money QR/link ingest + JTX gate for OPTX Augment-08.
   Use when user says xwealth, X Money QR, transfer link, or JTX gate.
-  Requires clones: jettoptx-xwealth + jettoptx-aaron-router.
-  Auth: Jett Optics X OAuth app (optional) + Solana wallet + JTX ≥1 gate.
-  No Privy. Never live-send unless user says LIVE.
+  Requires clone: jettoptx-xwealth (AARON router optional later — not required for beta dry-run).
+    Auth: Jett Optics X OAuth app (optional) + Solana wallet + JTX ≥1 gate.
+    No Privy. No SpacetimeDB required for beta. Never live-send unless user says LIVE.
   Works with Hermes, OpenClaw, Grok Build, Claude Code, Codex, Cursor, Pi.
 metadata:
   short-description: "X Money QR + JTX gate (Augment-08)"
@@ -84,13 +84,26 @@ cd jettoptx-xwealth && npm install && npm run setup
 1. `npm run setup` — wallet + JTX gate (lock tools if fail).
 2. Accept paste URL **or** image (prefer phone capture of live X Money QR).
 3. Decode: classic QR first → Grok Vision fallback.
-4. Normalize `{ handle, transferUrl, confidence, method }`.
-5. Dry-run payout intent; persist via AARON → SpacetimeDB when wired.
-6. **STOP** before live payout unless explicit LIVE + policy pass.
+4. Normalize `{ handle, transferUrl, kind, confidence, method }` via `parseMoneyLink`.
+   - Receive QR payloads are often `https://x.com/i/money/pay/{handle}` (not only `/transfer/`).
+   - Both `/pay/` and `/transfer/` are valid X Money links — parse both.
+5. Dry-run payout intent (`npm run dry-run` / `runDryRun()` / `buildDryRunIntent`). **No SpacetimeDB required.**
+   - Optional: `XWEALTH_KEYPAIR=/path/to/id.json` checks signer pubkey match (secret never logged).
+6. **STOP** before live payout unless explicit LIVE + policy pass + **local** signer + settle shipped.
+   - `mode: LIVE` is hard-blocked in code today (SHIP.md).
+   - Never put private keys in git or chat.
 
 ## Local UI
 
 `OPTX-windows/8-Wealth/xwealth-ui` → http://127.0.0.1:3001/
+
+- Browser JTX gate uses Vite proxy `/api/solana-rpc` (public RPC blocks browser `Origin` with 403).
+- Pay card nests QR in CSS glass; hover tilts card only (backdrop fixed).
+
+## Data / ledger
+
+- **Beta:** local session `~/.xwealth/session.json` (pubkey + gate result only) — gitignored patterns.
+- **SpacetimeDB:** optional later for usage ledger — **not required** for gate, parse, UI, or dry-run.
 
 ## Agentcard (virtual cards + MCP)
 
@@ -112,7 +125,7 @@ npx agent-cards companies wizard --agent --yes --app-name "X Wealth" --app-url h
 ## Do not
 
 - Reintroduce Privy on this surface
-- Store private keys / X client secrets in chat
+- Store private keys / X client secrets in chat or git
 - Call live send without human LIVE confirmation
-- Use Postgres/Convex as product DB (SpacetimeDB only)
+- Treat SpacetimeDB as required for beta (it is optional later)
 - Treat X OAuth alone as gate pass (must hold ≥1 JTX)

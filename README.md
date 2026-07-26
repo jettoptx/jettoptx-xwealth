@@ -5,12 +5,12 @@
 Graph-compatible nodes and harness skills so **any coding agent** (Hermes, OpenClaw, Grok Build, Claude Code, Codex, Cursor, Pi, etc.) can:
 
 1. **Auth without Privy** — Solana wallet + **JTX ≥ 1** gate; optional **Jett Optics X OAuth** app for X identity
-2. **Ingest** X Money transfer QR / links (`https://x.com/i/money/transfer/{handle}`) via classic QR decode + **Grok Vision**
+2. **Ingest** X Money QR / links (`https://x.com/i/money/pay/{handle}` **or** `/transfer/{handle}`) via classic QR decode + **Grok Vision**
 3. **Gate** on **JTX v2** (`≥ 1` token) via Solana RPC
-4. Route public actions through **AARON Router** + record state in **SpacetimeDB**
+4. Optional later: route via **AARON Router** / ledger — **not required for beta dry-run**
 5. Dry-run payout intents first; live send is operator-gated later
 
-> **Status:** Scaffold + product README. **Privy removed** — use wallet + JTX gate (+ optional X OAuth). Local UI prototype: `OPTX-windows/8-Wealth/xwealth-ui` → `http://127.0.0.1:3001/`.
+> **Status:** Augment-08 **beta / dry-run**. **Privy removed**. **SpacetimeDB not required** for gate, parse, UI, or dry-run. Local UI: `OPTX-windows/8-Wealth/xwealth-ui` → `http://127.0.0.1:3001/`.
 
 ---
 
@@ -19,11 +19,11 @@ Graph-compatible nodes and harness skills so **any coding agent** (Hermes, OpenC
 | Item | Value |
 |------|--------|
 | **JTX v2 mint (canonical)** | `JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe` |
-| **X Money transfer URL shape** | `https://x.com/i/money/transfer/{handle}` |
+| **X Money URL shapes** | `https://x.com/i/money/pay/{handle}` · `…/transfer/{handle}` |
 | **AARON public router (ref)** | [jettoptx/jettoptx-aaron-router](https://github.com/jettoptx/jettoptx-aaron-router) |
 | **This plugin** | [jettoptx/jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth) |
 | **Docs** | https://jettoptx.dev/docs |
-| **Sole product DB** | **SpacetimeDB** (not Postgres / Convex) |
+| **DB for beta** | **None required** (local `~/.xwealth/session.json` for gate stub). SpacetimeDB optional later — not Postgres/Convex |
 | **X OAuth app** | **Jett Optical Encryption** · app id `32724640` · [console.x.com](https://console.x.com) |
 | **X Client ID (public)** | `TFhKZW9KTmVxM3loTzd5ZEViVEU6MTpjaQ` |
 | **Auth model** | Wallet + JTX ≥1 (required) · X OAuth (optional identity) · **no Privy** |
@@ -56,6 +56,41 @@ npm run setup
 | `1` | Gate **fail** — need more JTX |
 | `2` | No wallet configured |
 
+### Dry-run (no money moved)
+
+```bash
+export SOLANA_WALLET='<your-solana-pubkey>'
+npm test
+npm run dry-run -- --to https://x.com/i/money/pay/JoshuaJett --amount 1
+# ok:true · live:false · settle:false · jtxGate checked on-chain
+```
+
+**Windows:**
+
+```powershell
+$env:SOLANA_WALLET = '<your-solana-pubkey>'
+npm test
+npm run dry-run -- --to https://x.com/i/money/pay/JoshuaJett --amount 1
+```
+
+Full demo script + **where to get the key file**: [`DEMO.md`](./DEMO.md) · what’s next: [`NEXT.md`](./NEXT.md)
+
+### Optional local signer file (not required for dry-run)
+
+Dry-run only needs a **pubkey**. For a later LIVE path (still blocked until settle ships), create a Solana CLI keypair **on your machine** and point env at the **path** (never commit the file):
+
+```bash
+solana-keygen new --outfile ~/.config/solana/xwealth-agent.json --no-bip39-passphrase
+export SOLANA_WALLET="$(solana-keygen pubkey ~/.config/solana/xwealth-agent.json)"
+export XWEALTH_KEYPAIR="$HOME/.config/solana/xwealth-agent.json"
+# fund SOLANA_WALLET with ≥1 JTX, then:
+npm run dry-run -- --to JoshuaJett --amount 1
+```
+
+- Secret stays in that JSON file (gitignored patterns cover `id.json` / key material).
+- If default `~/.config/solana/id.json` is a **different** pubkey, dry-run still passes with a **warning**.
+- **Never paste private keys into chat or the repo.**
+
 Optional X identity (same Jett Optics app as Hermes x-operator / bookmarks):
 
 ```bash
@@ -85,7 +120,9 @@ Agentcard withdraw-to-crypto: `npx agent-cards withdraw --amount 25 --to 0x…` 
 
 ## Required downloads (agent harness)
 
-Operators and agents must clone **both** repos. AARON is the public edge/router surface; xwealth is the X Money + JTX gate plugin.
+**Beta dry-run:** clone **this repo only**.
+
+**Optional later:** [jettoptx-aaron-router](https://github.com/jettoptx/jettoptx-aaron-router) for edge/router / ledger bridges — **not required** for gate, parse, UI, or `npm run dry-run`.
 
 ### Copy-paste — clone
 
@@ -171,7 +208,7 @@ Related local UI (optional, Josh Windows):
    Signing stays device-side / AARON — not in chat.
 3. JTX gate: wallet must hold **≥ 1** JTX v2:
    mint `JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe`
-4. Sole product database is **SpacetimeDB**. Do not invent Postgres/Convex/Supabase
+4. Sole product database is **not required for beta**. Do not invent Postgres/Convex/Supabase for this flow. SpacetimeDB is **optional later** for ledgers only.
    as source of truth. Prefer AARON → STDB reducers when writing.
 5. Do not merge X Wealth into `jettoptx-jtx-trade` or treat traderjoe SPCX trading
    as the same rail as X Money P2P (related Augment-08, separate surfaces).
