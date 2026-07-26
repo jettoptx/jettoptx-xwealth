@@ -12,7 +12,7 @@ No Privy. No private keys in git. Live settle is **not** shipped yet.
 | **Grok Build plugin** | same `jettoptx-xwealth` (see [GROK-PLUGIN.md](./GROK-PLUGIN.md)) | or marketplace `jettoptx/grok-plugins` when published |
 | **Hermes skill** | copy `skills/xwealth/` into Hermes `custom-skills/` | see skill README section below |
 
-You do **not** need SpacetimeDB, Jetson, or any private monorepo for the beta path.
+You do **not** need any database or private monorepo for the beta path.
 
 ## Quick start (any OS)
 
@@ -68,7 +68,7 @@ See [GROK-PLUGIN.md](./GROK-PLUGIN.md).
 | **https://jtx.agency** | Parked brand / alternate apex |
 | [agentcommunity.org/m/jett-optics](https://agentcommunity.org/m/jett-optics) | Community presence — not the app host |
 
-Local UI prototypes stay private; production builds deploy to the hosts above.
+Production builds deploy to the hosts above.
 
 ## Env (public-safe)
 
@@ -90,5 +90,6 @@ Local UI prototypes stay private; production builds deploy to the hosts above.
 ## Next reading
 
 - [ROADMAP.md](./ROADMAP.md) — beta → production  
-- [REPOS.md](./REPOS.md) — org public/private matrix  
+- [REPOS.md](./REPOS.md) — which repos to clone  
+
 - [SHIP.md](./SHIP.md) — what is / isn’t shipped  

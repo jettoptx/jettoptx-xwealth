@@ -21,8 +21,7 @@ Expect `ok: true`, `live: false`, LIVE blocked.
 ## Org hygiene
 
 - Keep this repo **public** for installs  
-- Publish **aaron-router** when edge demos are required  
-- Create **jettoptx/grok-plugins** catalog when ready for marketplace browse  
-- Never push founder SOUL, mesh IPs, or key material  
+- Publish optional companion repos only when demos need them  
+- Never commit secrets or key material  
 
 See [ROADMAP.md](./ROADMAP.md) and [REPOS.md](./REPOS.md).

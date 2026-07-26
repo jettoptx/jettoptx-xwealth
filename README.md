@@ -567,6 +567,6 @@ Public write path when ready: **AARON** → STDB reducers (same pattern as JettC
 | [agentcommunity.org/m/jett-optics](https://agentcommunity.org/m/jett-optics) | Community presence |
 | X app **Jett Optical Encryption** (`32724640`) | Optional OAuth / X API identity |
 
-See [REPOS.md](./REPOS.md) for public vs private org matrix.
+See [REPOS.md](./REPOS.md) for which repos to install.
 
 MIT License — Jett Optical Technologies / OPTX

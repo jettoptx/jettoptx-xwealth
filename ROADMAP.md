@@ -41,10 +41,10 @@ Audience: **developers** installing the plugin and **users** running agents (Her
 
 ## Non-goals (explicit)
 
-- Shipping founder machine paths or private mesh topology  
 - Requiring Agentcard company login to use the plugin  
 - Claiming LIVE USDC→X Money without a real bridge  
 - Publishing OAuth client secrets  
+
 
 ## Version framing
 
