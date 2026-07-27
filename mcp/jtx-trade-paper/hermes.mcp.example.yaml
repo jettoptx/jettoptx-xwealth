@@ -1,0 +1,16 @@
+# Drop into Hermes config.yaml under mcp_servers (adjust paths for your machine).
+# Profile example: %LOCALAPPDATA%/hermes/profiles/astrojoe/config.yaml
+#
+# NO SECRETS. Paper only.
+
+mcp_servers:
+  jtx_trade_paper:
+    command: "python"
+    args:
+      - "C:/Users/joshu/repos/jettoptx/jettoptx-xwealth/mcp/jtx-trade-paper/server.py"
+    # Optional: isolate ledger
+    # env:
+    #   JTX_PAPER_DATA_DIR: "C:/Users/joshu/AppData/Local/hermes/profiles/astrojoe/data/jtx-paper"
+    # Never set JTX_LIVE=1 unless a human explicitly enables LIVE and a real backend exists.
+    timeout: 60
+    connect_timeout: 30

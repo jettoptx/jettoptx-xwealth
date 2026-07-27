@@ -21,7 +21,11 @@
     "check-jtx": "node scripts/check-jtx-gate.mjs",
     "agent-cards:setup": "node scripts/agent-cards-setup.mjs",
     "agent-cards:wizard": "npx -y agent-cards companies wizard --agent --yes --app-name \"X Wealth\" --app-url http://localhost:3001 --path .",
-    "agent-cards:mcp-help": "npx -y agent-cards setup-mcp --help"
+    "agent-cards:mcp-help": "npx -y agent-cards setup-mcp --help",
+    "mcp:paper": "python mcp/jtx-trade-paper/server.py",
+    "mcp:paper:smoke": "python mcp/jtx-trade-paper/smoke_test.py",
+    "mcp:paper:cli": "python mcp/jtx-trade-paper/cli.py",
+    "digest:bookmarks": "node scripts/digest-bookmarks.mjs"
   },
   "keywords": [
     "optx",
