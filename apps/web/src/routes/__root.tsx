@@ -1,0 +1,117 @@
+import type { ReactNode } from "react";
+import {
+  Outlet,
+  createRootRoute,
+  HeadContent,
+  Scripts,
+} from "@tanstack/react-router";
+import { Toaster } from "sonner";
+import { SiteHeader } from "@/components/site-header";
+import { MobileNav } from "@/components/mobile-nav";
+import { AsciiGridBackground } from "@/components/ascii-grid-background";
+import { AuthProvider } from "@/lib/auth/provider";
+import { ThemeProvider, useTheme } from "@/lib/theme";
+import appCss from "@/styles.css?url";
+
+export const Route = createRootRoute({
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
+      },
+      {
+        title: "X Wealth · Jett Optical Encryption",
+      },
+      {
+        name: "description",
+        content:
+          "Link your X Money pay link and QR. Plug agent harnesses (Grok Build, Hermes, Claude) into x402 payments with USDC on Solana. Built for the X Developer E𝕏hibit by Jett Optical Encryption (@jettoptx).",
+      },
+      { name: "theme-color", content: "#0a0a0c" },
+      { property: "og:title", content: "X Wealth · Jett Optical Encryption" },
+      {
+        property: "og:description",
+        content:
+          "Agentic X Money pay surface — x402 · USDC · Solana · plugin-and-play harnesses.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: "/jtx-dao.jpg" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:creator", content: "@jettoptx" },
+      { name: "twitter:image", content: "/jtx-dao.jpg" },
+    ],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@500;600;700;800&display=swap",
+      },
+      { rel: "icon", href: "/jtx-dao.jpg", type: "image/jpeg" },
+      { rel: "apple-touch-icon", href: "/jtx-dao.jpg" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    scripts: [
+      {
+        children: `(function(){try{var t=localStorage.getItem('xwealth-theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;document.documentElement.classList.add(t);document.documentElement.style.colorScheme=t;}}catch(e){}})();`,
+      },
+    ],
+  }),
+  component: RootComponent,
+});
+
+function RootComponent() {
+  return (
+    <RootDocument>
+      <ThemeProvider>
+        <AuthProvider>
+          <AsciiGridBackground />
+          <div className="relative z-10 flex min-h-dvh flex-col pb-16 sm:pb-0">
+            <SiteHeader />
+            <div className="flex-1">
+              <Outlet />
+            </div>
+            <MobileNav />
+          </div>
+          <ThemedToaster />
+        </AuthProvider>
+      </ThemeProvider>
+    </RootDocument>
+  );
+}
+
+function ThemedToaster() {
+  const { theme } = useTheme();
+  return (
+    <Toaster
+      theme={theme}
+      position="bottom-center"
+      offset={{ bottom: "4.5rem" }}
+      mobileOffset={{ bottom: "4.5rem" }}
+      toastOptions={{
+        className: "font-sans border-border bg-surface text-fg",
+      }}
+    />
+  );
+}
+
+function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <HeadContent />
+      </head>
+      <body className="min-h-dvh bg-bg text-fg antialiased">
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+}
