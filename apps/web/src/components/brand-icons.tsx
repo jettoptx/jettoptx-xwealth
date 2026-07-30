@@ -102,6 +102,26 @@ export function JtxMark({
   );
 }
 
+/** Astro Knots mark — geometric $ over black-hole accretion disk */
+export function AstroKnotsMark({
+  className,
+  size = 32,
+}: {
+  className?: string;
+  size?: number;
+}) {
+  return (
+    <img
+      src="/brand/astroknots-icon.png"
+      alt="Astro Knots"
+      width={size}
+      height={size}
+      className={cn("shrink-0 rounded-lg", className)}
+      decoding="async"
+    />
+  );
+}
+
 export function OptxBadge({
   className,
   height = 28,

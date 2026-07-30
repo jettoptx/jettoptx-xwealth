@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         appearance: {
           theme: "dark",
           accentColor: "#FF6900",
-          logo: "/jtx-dao.jpg",
+          logo: "/brand/astroknots-icon.png",
           landingHeader: "X Wealth",
           loginMessage: "Link your X handle for agentic X Money pay.",
           showWalletLoginFirst: false,
