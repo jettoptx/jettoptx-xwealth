@@ -155,12 +155,18 @@ export function MoaMapView({
                       normalizeHandle(node.handle)),
               );
             const r = node.handle === "jettoptx" ? 18 : 14;
+            const clipId = `moa-avatar-${node.id}`;
             return (
               <g
                 key={node.id}
                 className="cursor-pointer"
                 onClick={() => onSelectHandle(node.handle)}
               >
+                <defs>
+                  <clipPath id={clipId}>
+                    <circle cx={p.x} cy={p.y} r={r} />
+                  </clipPath>
+                </defs>
                 <circle
                   cx={p.x}
                   cy={p.y}
@@ -186,16 +192,28 @@ export function MoaMapView({
                   }
                   strokeWidth={selected ? 2 : 1}
                 />
-                <text
-                  x={p.x}
-                  y={p.y + 1}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-fg"
-                  style={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
-                >
-                  {monogram(node.handle)}
-                </text>
+                {node.avatarUrl ? (
+                  <image
+                    href={node.avatarUrl}
+                    x={p.x - r}
+                    y={p.y - r}
+                    width={r * 2}
+                    height={r * 2}
+                    clipPath={`url(#${clipId})`}
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                ) : (
+                  <text
+                    x={p.x}
+                    y={p.y + 1}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="fill-fg"
+                    style={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+                  >
+                    {monogram(node.handle)}
+                  </text>
+                )}
                 <text
                   x={p.x}
                   y={p.y + r + 12}

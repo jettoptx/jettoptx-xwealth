@@ -37,10 +37,10 @@ export const Route = createRootRoute({
           "Agentic X Money pay surface — x402 · USDC · Solana · plugin-and-play harnesses.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "/jtx-dao.jpg" },
+      { property: "og:image", content: "/og-astroknots.jpg" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:creator", content: "@jettoptx" },
-      { name: "twitter:image", content: "/jtx-dao.jpg" },
+      { name: "twitter:image", content: "/og-astroknots.jpg" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -54,9 +54,15 @@ export const Route = createRootRoute({
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@500;600;700;800&display=swap",
       },
-      { rel: "icon", href: "/jtx-dao.jpg", type: "image/jpeg" },
-      { rel: "apple-touch-icon", href: "/jtx-dao.jpg" },
-      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "48x48" },
+      {
+        rel: "icon",
+        href: "/brand/astroknots-icon.png",
+        type: "image/png",
+        sizes: "256x256",
+      },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
     scripts: [
       {

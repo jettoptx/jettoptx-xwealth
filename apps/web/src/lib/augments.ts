@@ -206,6 +206,7 @@ export const AUGMENT_SEED: AugmentListing[] = [
     tags: ["wealth", "prototype"],
     relation: "marketplace",
     accent: "#ff6900",
+    avatarUrl: "/brand/astroknots-icon.png",
   },
   {
     id: "devrel",

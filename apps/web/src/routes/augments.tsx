@@ -676,6 +676,18 @@ function AvatarBubble({
   large?: boolean;
 }) {
   const size = large ? "h-12 w-12 text-sm" : "h-10 w-10 text-xs";
+  if (item.avatarUrl) {
+    return (
+      <img
+        src={item.avatarUrl}
+        alt={`@${item.handle}`}
+        width={large ? 48 : 40}
+        height={large ? 48 : 40}
+        className={`shrink-0 rounded-full border border-border object-cover ${size}`}
+        decoding="async"
+      />
+    );
+  }
   return (
     <div
       className={`grid shrink-0 place-items-center rounded-full border border-border font-mono font-semibold ${size}`}

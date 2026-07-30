@@ -1,6 +1,6 @@
 # Handoff — next agent (Cloudflare + repo)
 
-Read this before changing DNS or deploy roots. MoA v1 is already live.
+**Start here.** Read this before changing DNS or deploy roots. MoA v1 is already live.
 
 ## Already done
 
@@ -8,6 +8,8 @@ Read this before changing DNS or deploy roots. MoA v1 is already live.
 - Privy X login + OPTX orange + x402 dry-run / REAL (Privy sign → X Money window)
 - **Map of Augments v1**: List|Map, seed graph around `@jettoptx`, truncated proofs (`amountPublic: null`), NOTR stub
 - DNS today: **Vercel nameservers** (`ns1/ns2.vercel-dns.com`) — **not** Cloudflare
+- **Favicon + Astro Knots icon**: geometric `$` over black-hole accretion disk
+  (`apps/web/public/brand/astroknots-icon.png`, favicon.ico/png, apple-touch, OG)
 - Open PRs (merge if still open):
   - https://github.com/jettoptx/xwealth/pull/1
   - https://github.com/jettoptx/jettoptx-xwealth/pull/2 (`apps/web` fold)

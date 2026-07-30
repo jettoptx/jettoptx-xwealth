@@ -1,5 +1,7 @@
 # Next steps (maintainers)
 
+**Next agent: start at [docs/HANDOFF-CLOUDFLARE.md](./docs/HANDOFF-CLOUDFLARE.md)** (also `apps/web/docs/HANDOFF-CLOUDFLARE.md`).
+
 Internal planning after beta. Keep operational paths out of public commits.
 
 ## Validate beta
@@ -14,7 +16,7 @@ Expect `ok: true`, `live: false`, LIVE blocked.
 
 ## Product hosts
 
-1. Deploy UI → **wealth.astroknots.space**  
+1. Deploy UI → **wealth.astroknots.space** / **https://xwealth.space**
 2. Optional: **jtx.agency** → redirect/marketing  
 3. Community link: [agentcommunity.org/m/jett-optics](https://agentcommunity.org/m/jett-optics)
 
