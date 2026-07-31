@@ -1,8 +1,13 @@
 # Repos to install
 
-Canonical product name: **jettoptx-xwealth**.
+## Architecture (2026-07-30)
 
-## Minimum (beta)
+| Layer | Repo | Role |
+|-------|------|------|
+| **OUTSIDE** | **[jettoptx/xwealth](https://github.com/jettoptx/xwealth)** | Public product shell · **xwealth.space** · Privy login · augments map · pay console |
+| **INSIDE** | **This repo** (`jettoptx/jettoptx-xwealth`) | Agent plugin option after login · skills · dry-run CLI · JTX ≥1 · **no Privy** |
+
+## Minimum (agent plugin beta)
 
 ```bash
 git clone https://github.com/jettoptx/jettoptx-xwealth.git
@@ -11,32 +16,28 @@ cd jettoptx-xwealth
 
 | Repo | Role |
 |------|------|
-| **[jettoptx/jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth)** | **Canonical** — agent plugin, skills, dry-run CLI, Grok plugin, **and** web dashboard (`apps/web`) |
+| **[jettoptx/jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth)** | Agent plugin, skills, dry-run CLI, Grok plugin (this root) |
+| **[jettoptx/xwealth](https://github.com/jettoptx/xwealth)** | Outer web product on xwealth.space |
 
-## Web UI (post-login dashboard)
+## Web UI (outer shell — not this root)
 
 | Surface | URL |
 |---------|-----|
 | **Production** | **https://xwealth.space** |
 | Login | https://xwealth.space/login |
 | Console (post-login) | https://xwealth.space/console |
+| Augments map | https://xwealth.space/augments |
 
-After **Continue with X** (Privy on the web app only), users land on the **console dashboard**:
+After **Continue with X** on the **outer** app, users land on the console and can open **Agent plugin** (this repo) from Dashboard.
 
-- X Money pay / transfer link + QR
-- Agent harness picker (Grok / Hermes / Claude / custom)
-- x402 dry-run rail
-- Augments marketplace tab
+Plugin / agent code stays at this repo root (`src/`, `skills/`, `scripts/`).  
+`apps/web` here is a mirror only — canonical outer UI is **jettoptx/xwealth**.
 
-Source for the dashboard lives under **`apps/web`** in this repo (folded from the temporary `jettoptx/xwealth` UI scaffold).  
-Plugin / agent code stays at repo root (`src/`, `skills/`, `scripts/`).
+## Legacy
 
-## Temporary / legacy
-
-| Repo | Status |
-|------|--------|
-| **[jettoptx/xwealth](https://github.com/jettoptx/xwealth)** | Temporary Grok Build UI push — **fold into `apps/web` here**, then archive |
-| wealth.astroknots.space | Older host / alias — prefer **xwealth.space** |
+| Host / repo | Status |
+|-------------|--------|
+| wealth.astroknots.space | **Retired** — use **xwealth.space** |
 
 ## Optional
 
