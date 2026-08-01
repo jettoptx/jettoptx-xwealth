@@ -61,6 +61,11 @@ export const MARKET_PEERS: MarketPeer[] = [
     skillCount: 2,
     note: 'Grok Build plugin authors',
   },
+  {
+    handle: 'doublezero',
+    skillCount: 4,
+    note: 'DoubleZero open-source network · Edge · status/links',
+  },
 ]
 
 export function loadMarketMode(): boolean {

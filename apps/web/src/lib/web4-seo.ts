@@ -17,12 +17,21 @@
  *  4. Blockworks/Messari — native crypto token + DeFi protocol search
  *                          https://blockworks.com/products/api-mcp
  *                          MCP: https://mcp.messari.io/mcp
+ *  5. DoubleZero          — open-source high-perf Solana network fabric
+ *                          https://data.doublezero.xyz/status/links
+ *                          https://github.com/malbeclabs/doublezero
  *
  * /augments is the marketplace UI for this engine.
  */
 
 import { OPTX_MARK } from "@/lib/brand";
 import { BLOCKWORKS_MCP_URL, BLOCKWORKS_PRODUCT } from "@/lib/blockworks";
+import {
+  DOUBLEZERO_DOCS,
+  DOUBLEZERO_GITHUB_CORE,
+  DOUBLEZERO_SEO,
+  DOUBLEZERO_STATUS_LINKS,
+} from "@/lib/doublezero";
 import { TINYFISH_MCP_URL } from "@/lib/tinyfish";
 
 /** Canonical slogan — the brand line for /augments */
@@ -60,6 +69,11 @@ export const WEB4_SEO = {
       blurb: "Native token + DeFi protocol ranker (API + MCP)",
     },
     {
+      id: "doublezero",
+      title: "DoubleZero network",
+      blurb: "Open-source fiber · Edge · live link status for Solana",
+    },
+    {
       id: "grok",
       title: "xAI Grok tooling",
       blurb: "Rank, summarize, and draft agent page payloads",
@@ -71,6 +85,9 @@ export const WEB4_SEO = {
   },
   productLinks: {
     blockworks: BLOCKWORKS_PRODUCT,
+    doublezero: DOUBLEZERO_STATUS_LINKS,
+    doublezeroDocs: DOUBLEZERO_DOCS,
+    doublezeroGithub: DOUBLEZERO_GITHUB_CORE,
   },
   /** Open-web / agent identity presets (TinyFish) */
   defaultQueries: [
@@ -99,6 +116,13 @@ export const WEB4_SEO = {
       query: "AI agent payments X Money crypto 2026",
       purpose: "Fresh news for Web4 agent SEO radar",
       domainType: "news" as const,
+    },
+    {
+      id: "doublezero",
+      label: "DoubleZero",
+      query: DOUBLEZERO_SEO.query,
+      purpose:
+        "Web4 infra SEO: DoubleZero open-source Solana network + Edge + status/links",
     },
   ],
   /** Crypto / DeFi presets (Blockworks Messari lane) */
@@ -137,6 +161,12 @@ export const WEB4_SEO = {
       id: "jtx",
       label: "JTX rails",
       query: "solana defi USDC agent payments",
+      mode: "crypto" as const,
+    },
+    {
+      id: "doublezero",
+      label: "DoubleZero",
+      query: DOUBLEZERO_SEO.query,
       mode: "crypto" as const,
     },
   ],
@@ -293,6 +323,46 @@ export const WEB4_API_PLUGINS: Web4ApiPlugin[] = [
     lane: "agents",
     query: "AgenC on-chain agent marketplace Solana escrow task payout",
     accent: "#4ade80",
+  },
+  {
+    id: "doublezero",
+    name: "DoubleZero",
+    brand: DOUBLEZERO_SEO.brand,
+    blurb:
+      "Open-source high-perf Solana network · live link status · Edge · contracts",
+    href: DOUBLEZERO_STATUS_LINKS,
+    docs: DOUBLEZERO_DOCS,
+    logo: DOUBLEZERO_SEO.logo,
+    lane: "defi",
+    pinAgents: true,
+    query: DOUBLEZERO_SEO.query,
+    accent: DOUBLEZERO_SEO.accent,
+  },
+  {
+    id: "doublezero-core",
+    name: "DZ core",
+    brand: "malbeclabs/doublezero",
+    blurb: "Apache-2.0 networking stack for distributed systems",
+    href: DOUBLEZERO_GITHUB_CORE,
+    docs: "https://docs.malbeclabs.com/architecture/",
+    logo: DOUBLEZERO_SEO.logo,
+    lane: "defi",
+    pinAgents: true,
+    query: "malbeclabs doublezero open source networking Solana",
+    accent: "#38bdf8",
+  },
+  {
+    id: "doublezero-edge",
+    name: "DZ Edge",
+    brand: "Edge multicast · shreds",
+    blurb: "Low-latency Solana market-data transport over DoubleZero",
+    href: "https://doublezero.xyz/dz-edge",
+    docs: "https://docs.malbeclabs.com/Edge%20Subscriber%20Connection/",
+    logo: DOUBLEZERO_SEO.logo,
+    lane: "defi",
+    pinAgents: true,
+    query: "DoubleZero Edge Solana shreds multicast market data",
+    accent: "#0ea5e9",
   },
 ];
 
