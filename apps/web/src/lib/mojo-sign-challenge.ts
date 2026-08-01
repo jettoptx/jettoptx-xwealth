@@ -4,10 +4,9 @@
  * Mints via same-origin `/api/mojo/sign-challenge` → AARON.
  * Schema: jettoptx-aaron-router/docs/mojo-sign-tx-challenge.md
  *
- * TODO (xwealth attach):
- * 1. Build unsigned Solana USDC transfer → set tx.unsignedTx (base64)
- * 2. On verified, broadcast result.signedTx via Helius (or attach to x402 settle)
- * 3. Prefer Solana payTo pubkey over X Money URL-as-destination
+ * Phone (MOJO) builds the USDC transfer when `unsignedTx` is omitted —
+ * web must set `destination` / `payTo` to a Solana pubkey.
+ * On verified: broadcast `result.signedTx` via `/api/mojo/broadcast` (Helius).
  */
 
 import { USDC_MINT_SOLANA } from "@/lib/x402";

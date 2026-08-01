@@ -32,6 +32,11 @@ import { privyEnabled } from "@/lib/auth/privy";
 import { cn } from "@/lib/utils";
 import { MojoSignQrModal } from "@/components/mojo-sign-qr";
 import type { SignTxMeta } from "@/lib/mojo-sign-challenge";
+import {
+  broadcastMojoSignedTx,
+  looksLikeSolanaPubkey,
+  resolveSolanaPayTo,
+} from "@/lib/usdc-payto";
 
 type PayMode = "dry" | "live";
 
@@ -49,6 +54,9 @@ export function X402Panel() {
   const [log, setLog] = useState<string[]>([]);
   const [mojoOpen, setMojoOpen] = useState(false);
   const [mojoSig, setMojoSig] = useState<string | null>(null);
+  const [mojoChainSig, setMojoChainSig] = useState<string | null>(null);
+  /** Solana USDC destination for Mojo QR (not X Money URL). */
+  const [solPayTo, setSolPayTo] = useState("");
 
   // Privy wallet hooks — only used on REAL path
   const { ready, authenticated } = usePrivy();
@@ -56,26 +64,30 @@ export function X402Panel() {
   const { signMessage } = useSignMessage();
   const { createWallet } = useCreateWallet();
 
-  /** Mojo QR spend meta — destination should be a Solana pubkey when available. */
+  const solDest = resolveSolanaPayTo({
+    destination: solPayTo,
+    payTo: solPayTo,
+  });
+
+  /** Mojo QR spend meta — phone builds + signs USDC transfer to solDest. */
   const mojoTx: SignTxMeta | null = useMemo(() => {
-    if (!money) return null;
+    if (!money || !solDest) return null;
     return {
       amount: amount.trim() || "0.10",
       mint: USDC_MINT_SOLANA,
       asset: "USDC",
-      // Prefer SOL payTo when linked; fall back to X Money URL (metadata only).
-      payTo: money.transferUrl,
-      destination: walletStore || null,
+      payTo: solDest,
+      destination: solDest,
       network: "solana-mainnet",
       memo: `xwealth x402 @${money.handle}`,
       resource:
         typeof window !== "undefined"
           ? `${window.location.origin}/api/x402/pay`
           : "/api/x402/pay",
-      // TODO: attach base64 unsigned USDC transfer for phone signing
+      // Phone builds transfer when null (signer = Mojo wallet)
       unsignedTx: null,
     };
-  }, [money, amount, walletStore]);
+  }, [money, amount, solDest]);
 
   function push(line: string) {
     setLog((L) => [line, ...L].slice(0, 14));
@@ -384,44 +396,66 @@ export function X402Panel() {
           </label>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-          <div className="space-y-2">
-            <Label htmlFor="amt">Amount (USDC)</Label>
-            <Input
-              id="amt"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              inputMode="decimal"
-              className="max-w-[160px]"
-            />
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div className="space-y-2">
+              <Label htmlFor="amt">Amount (USDC)</Label>
+              <Input
+                id="amt"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                inputMode="decimal"
+                className="max-w-[160px]"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={mode === "live" ? "default" : "accent"}
+                className={cn(
+                  mode === "live" &&
+                    "bg-amber-600 text-white hover:bg-amber-500",
+                )}
+                disabled={!money || busy || (mode === "live" && !liveConfirm)}
+                onClick={() => void runPay()}
+              >
+                {busy ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Zap className="size-4" />
+                )}
+                {mode === "live" ? "Sign & Pay now" : "Run agent pay"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!money || !mojoTx}
+                onClick={() => {
+                  if (!looksLikeSolanaPubkey(solPayTo)) {
+                    toast.error("Enter a Solana USDC destination pubkey for MOJO QR");
+                    return;
+                  }
+                  setMojoOpen(true);
+                }}
+                title="Approve Solana USDC spend via MOJO QR (same rail as jtx.chat/login)"
+              >
+                <Smartphone className="size-4" />
+                MOJO QR
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant={mode === "live" ? "default" : "accent"}
-              className={cn(
-                mode === "live" && "bg-amber-600 text-white hover:bg-amber-500",
-              )}
-              disabled={!money || busy || (mode === "live" && !liveConfirm)}
-              onClick={() => void runPay()}
-            >
-              {busy ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Zap className="size-4" />
-              )}
-              {mode === "live" ? "Sign & Pay now" : "Run agent pay"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!money || !mojoTx}
-              onClick={() => setMojoOpen(true)}
-              title="Approve Solana USDC spend via MOJO QR (same rail as jtx.chat/login)"
-            >
-              <Smartphone className="size-4" />
-              MOJO QR
-            </Button>
+          <div className="space-y-2">
+            <Label htmlFor="sol-payto">MOJO Solana payTo (USDC)</Label>
+            <Input
+              id="sol-payto"
+              value={solPayTo}
+              onChange={(e) => setSolPayTo(e.target.value.trim())}
+              placeholder="Destination Solana pubkey"
+              className="font-mono text-xs"
+            />
+            <p className="text-[11px] text-muted">
+              Phone builds + signs the USDC transfer. Not an X Money URL.
+            </p>
           </div>
         </div>
 
@@ -429,9 +463,15 @@ export function X402Panel() {
           <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 font-mono text-xs">
             <div className="text-orange-300">MOJO signed</div>
             <div className="mt-1 break-all">{mojoSig}</div>
-            <div className="mt-1 text-subtle">
-              TODO: attach unsignedTx + broadcast signedTx via Helius for settle
-            </div>
+            {mojoChainSig ? (
+              <div className="mt-1 break-all text-emerald-400">
+                on-chain: {mojoChainSig}
+              </div>
+            ) : (
+              <div className="mt-1 text-subtle">
+                Waiting for Helius broadcast… (or phone already sent)
+              </div>
+            )}
           </div>
         )}
 
@@ -517,10 +557,38 @@ export function X402Panel() {
           tx={mojoTx}
           origin="xwealth"
           onSigned={(r) => {
-            setMojoSig(r.signature);
-            push(`← MOJO signed ${r.signature.slice(0, 18)}…`);
-            toast.success("MOJO signed spend");
-            setMojoOpen(false);
+            void (async () => {
+              setMojoSig(r.signature);
+              setMojoChainSig(null);
+              push(`← MOJO signed ${r.signature.slice(0, 18)}…`);
+              setMojoOpen(false);
+              if (r.signedTx) {
+                push("→ Helius broadcast signedTx…");
+                const sent = await broadcastMojoSignedTx(r.signedTx);
+                if (sent.ok) {
+                  setMojoChainSig(sent.signature);
+                  push(`← on-chain ${sent.signature.slice(0, 18)}… (${sent.rpc})`);
+                  toast.success("MOJO USDC broadcast");
+                  if (money) {
+                    addReceipt({
+                      amount: amount.trim() || "0.10",
+                      asset: "USDC",
+                      xHandle: money.handle,
+                      transaction: sent.signature,
+                      harness: "live",
+                      settledAt: new Date().toISOString(),
+                    });
+                  }
+                } else {
+                  push(`← broadcast failed: ${sent.error}`);
+                  toast.error(sent.error);
+                }
+              } else {
+                // Phone may have signAndSend'd already — signature is the chain sig.
+                setMojoChainSig(r.signature);
+                toast.success("MOJO signed (phone broadcast)");
+              }
+            })();
           }}
         />
       )}

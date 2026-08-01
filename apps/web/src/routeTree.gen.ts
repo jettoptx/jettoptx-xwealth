@@ -19,14 +19,16 @@ import { Route as MoaRouteImport } from './routes/moa'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as WarpRouteImport } from './routes/warp'
 import { Route as ApiAvatarRouteImport } from './routes/api/avatar'
+import { Route as ApiSolanaRpcRouteImport } from './routes/api/solana-rpc'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiBlockworksSearchRouteImport } from './routes/api/blockworks/search'
+import { Route as ApiMojoBroadcastRouteImport } from './routes/api/mojo/broadcast'
+import { Route as ApiMojoSignChallengeRouteImport } from './routes/api/mojo/sign-challenge'
 import { Route as ApiTinyfishEnrichRouteImport } from './routes/api/tinyfish/enrich'
 import { Route as ApiTinyfishSearchRouteImport } from './routes/api/tinyfish/search'
+import { Route as ApiXProbeMoneyRouteImport } from './routes/api/x/probe-money'
 import { Route as ApiXSocialGraphRouteImport } from './routes/api/x/social-graph'
 import { Route as ApiX402PayRouteImport } from './routes/api/x402/pay'
-import { Route as ApiSolanaRpcRouteImport } from './routes/api/solana-rpc'
-import { Route as ApiXProbeMoneyRouteImport } from './routes/api/x/probe-money'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -78,6 +80,11 @@ const ApiAvatarRoute = ApiAvatarRouteImport.update({
   path: '/api/avatar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSolanaRpcRoute = ApiSolanaRpcRouteImport.update({
+  id: '/api/solana-rpc',
+  path: '/api/solana-rpc',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -86,6 +93,16 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 const ApiBlockworksSearchRoute = ApiBlockworksSearchRouteImport.update({
   id: '/api/blockworks/search',
   path: '/api/blockworks/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMojoBroadcastRoute = ApiMojoBroadcastRouteImport.update({
+  id: '/api/mojo/broadcast',
+  path: '/api/mojo/broadcast',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMojoSignChallengeRoute = ApiMojoSignChallengeRouteImport.update({
+  id: '/api/mojo/sign-challenge',
+  path: '/api/mojo/sign-challenge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTinyfishEnrichRoute = ApiTinyfishEnrichRouteImport.update({
@@ -98,6 +115,11 @@ const ApiTinyfishSearchRoute = ApiTinyfishSearchRouteImport.update({
   path: '/api/tinyfish/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiXProbeMoneyRoute = ApiXProbeMoneyRouteImport.update({
+  id: '/api/x/probe-money',
+  path: '/api/x/probe-money',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiXSocialGraphRoute = ApiXSocialGraphRouteImport.update({
   id: '/api/x/social-graph',
   path: '/api/x/social-graph',
@@ -106,16 +128,6 @@ const ApiXSocialGraphRoute = ApiXSocialGraphRouteImport.update({
 const ApiX402PayRoute = ApiX402PayRouteImport.update({
   id: '/api/x402/pay',
   path: '/api/x402/pay',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSolanaRpcRoute = ApiSolanaRpcRouteImport.update({
-  id: '/api/solana-rpc',
-  path: '/api/solana-rpc',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiXProbeMoneyRoute = ApiXProbeMoneyRouteImport.update({
-  id: '/api/x/probe-money',
-  path: '/api/x/probe-money',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -130,14 +142,16 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/warp': typeof WarpRoute
   '/api/avatar': typeof ApiAvatarRoute
+  '/api/solana-rpc': typeof ApiSolanaRpcRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/blockworks/search': typeof ApiBlockworksSearchRoute
+  '/api/mojo/broadcast': typeof ApiMojoBroadcastRoute
+  '/api/mojo/sign-challenge': typeof ApiMojoSignChallengeRoute
   '/api/tinyfish/enrich': typeof ApiTinyfishEnrichRoute
   '/api/tinyfish/search': typeof ApiTinyfishSearchRoute
+  '/api/x/probe-money': typeof ApiXProbeMoneyRoute
   '/api/x/social-graph': typeof ApiXSocialGraphRoute
   '/api/x402/pay': typeof ApiX402PayRoute
-  '/api/solana-rpc': typeof ApiSolanaRpcRoute
-  '/api/x/probe-money': typeof ApiXProbeMoneyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,14 +164,16 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/warp': typeof WarpRoute
   '/api/avatar': typeof ApiAvatarRoute
+  '/api/solana-rpc': typeof ApiSolanaRpcRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/blockworks/search': typeof ApiBlockworksSearchRoute
+  '/api/mojo/broadcast': typeof ApiMojoBroadcastRoute
+  '/api/mojo/sign-challenge': typeof ApiMojoSignChallengeRoute
   '/api/tinyfish/enrich': typeof ApiTinyfishEnrichRoute
   '/api/tinyfish/search': typeof ApiTinyfishSearchRoute
+  '/api/x/probe-money': typeof ApiXProbeMoneyRoute
   '/api/x/social-graph': typeof ApiXSocialGraphRoute
   '/api/x402/pay': typeof ApiX402PayRoute
-  '/api/solana-rpc': typeof ApiSolanaRpcRoute
-  '/api/x/probe-money': typeof ApiXProbeMoneyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -171,14 +187,16 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/warp': typeof WarpRoute
   '/api/avatar': typeof ApiAvatarRoute
+  '/api/solana-rpc': typeof ApiSolanaRpcRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/blockworks/search': typeof ApiBlockworksSearchRoute
+  '/api/mojo/broadcast': typeof ApiMojoBroadcastRoute
+  '/api/mojo/sign-challenge': typeof ApiMojoSignChallengeRoute
   '/api/tinyfish/enrich': typeof ApiTinyfishEnrichRoute
   '/api/tinyfish/search': typeof ApiTinyfishSearchRoute
+  '/api/x/probe-money': typeof ApiXProbeMoneyRoute
   '/api/x/social-graph': typeof ApiXSocialGraphRoute
   '/api/x402/pay': typeof ApiX402PayRoute
-  '/api/solana-rpc': typeof ApiSolanaRpcRoute
-  '/api/x/probe-money': typeof ApiXProbeMoneyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -193,14 +211,16 @@ export interface FileRouteTypes {
     | '/settings'
     | '/warp'
     | '/api/avatar'
+    | '/api/solana-rpc'
     | '/api/auth/$'
     | '/api/blockworks/search'
+    | '/api/mojo/broadcast'
+    | '/api/mojo/sign-challenge'
     | '/api/tinyfish/enrich'
     | '/api/tinyfish/search'
+    | '/api/x/probe-money'
     | '/api/x/social-graph'
     | '/api/x402/pay'
-    | '/api/solana-rpc'
-    | '/api/x/probe-money'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -213,14 +233,16 @@ export interface FileRouteTypes {
     | '/settings'
     | '/warp'
     | '/api/avatar'
+    | '/api/solana-rpc'
     | '/api/auth/$'
     | '/api/blockworks/search'
+    | '/api/mojo/broadcast'
+    | '/api/mojo/sign-challenge'
     | '/api/tinyfish/enrich'
     | '/api/tinyfish/search'
+    | '/api/x/probe-money'
     | '/api/x/social-graph'
     | '/api/x402/pay'
-    | '/api/solana-rpc'
-    | '/api/x/probe-money'
   id:
     | '__root__'
     | '/'
@@ -233,14 +255,16 @@ export interface FileRouteTypes {
     | '/settings'
     | '/warp'
     | '/api/avatar'
+    | '/api/solana-rpc'
     | '/api/auth/$'
     | '/api/blockworks/search'
+    | '/api/mojo/broadcast'
+    | '/api/mojo/sign-challenge'
     | '/api/tinyfish/enrich'
     | '/api/tinyfish/search'
+    | '/api/x/probe-money'
     | '/api/x/social-graph'
     | '/api/x402/pay'
-    | '/api/solana-rpc'
-    | '/api/x/probe-money'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -254,14 +278,16 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   WarpRoute: typeof WarpRoute
   ApiAvatarRoute: typeof ApiAvatarRoute
+  ApiSolanaRpcRoute: typeof ApiSolanaRpcRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiBlockworksSearchRoute: typeof ApiBlockworksSearchRoute
+  ApiMojoBroadcastRoute: typeof ApiMojoBroadcastRoute
+  ApiMojoSignChallengeRoute: typeof ApiMojoSignChallengeRoute
   ApiTinyfishEnrichRoute: typeof ApiTinyfishEnrichRoute
   ApiTinyfishSearchRoute: typeof ApiTinyfishSearchRoute
+  ApiXProbeMoneyRoute: typeof ApiXProbeMoneyRoute
   ApiXSocialGraphRoute: typeof ApiXSocialGraphRoute
   ApiX402PayRoute: typeof ApiX402PayRoute
-  ApiSolanaRpcRoute: typeof ApiSolanaRpcRoute
-  ApiXProbeMoneyRoute: typeof ApiXProbeMoneyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -336,6 +362,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAvatarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/solana-rpc': {
+      id: '/api/solana-rpc'
+      path: '/api/solana-rpc'
+      fullPath: '/api/solana-rpc'
+      preLoaderRoute: typeof ApiSolanaRpcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -348,6 +381,20 @@ declare module '@tanstack/react-router' {
       path: '/api/blockworks/search'
       fullPath: '/api/blockworks/search'
       preLoaderRoute: typeof ApiBlockworksSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/mojo/broadcast': {
+      id: '/api/mojo/broadcast'
+      path: '/api/mojo/broadcast'
+      fullPath: '/api/mojo/broadcast'
+      preLoaderRoute: typeof ApiMojoBroadcastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/mojo/sign-challenge': {
+      id: '/api/mojo/sign-challenge'
+      path: '/api/mojo/sign-challenge'
+      fullPath: '/api/mojo/sign-challenge'
+      preLoaderRoute: typeof ApiMojoSignChallengeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/tinyfish/enrich': {
@@ -364,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTinyfishSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/x/probe-money': {
+      id: '/api/x/probe-money'
+      path: '/api/x/probe-money'
+      fullPath: '/api/x/probe-money'
+      preLoaderRoute: typeof ApiXProbeMoneyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/x/social-graph': {
       id: '/api/x/social-graph'
       path: '/api/x/social-graph'
@@ -376,20 +430,6 @@ declare module '@tanstack/react-router' {
       path: '/api/x402/pay'
       fullPath: '/api/x402/pay'
       preLoaderRoute: typeof ApiX402PayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/solana-rpc': {
-      id: '/api/solana-rpc'
-      path: '/api/solana-rpc'
-      fullPath: '/api/solana-rpc'
-      preLoaderRoute: typeof ApiSolanaRpcRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/x/probe-money': {
-      id: '/api/x/probe-money'
-      path: '/api/x/probe-money'
-      fullPath: '/api/x/probe-money'
-      preLoaderRoute: typeof ApiXProbeMoneyRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -406,24 +446,17 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   WarpRoute: WarpRoute,
   ApiAvatarRoute: ApiAvatarRoute,
+  ApiSolanaRpcRoute: ApiSolanaRpcRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiBlockworksSearchRoute: ApiBlockworksSearchRoute,
+  ApiMojoBroadcastRoute: ApiMojoBroadcastRoute,
+  ApiMojoSignChallengeRoute: ApiMojoSignChallengeRoute,
   ApiTinyfishEnrichRoute: ApiTinyfishEnrichRoute,
   ApiTinyfishSearchRoute: ApiTinyfishSearchRoute,
+  ApiXProbeMoneyRoute: ApiXProbeMoneyRoute,
   ApiXSocialGraphRoute: ApiXSocialGraphRoute,
   ApiX402PayRoute: ApiX402PayRoute,
-  ApiSolanaRpcRoute: ApiSolanaRpcRoute,
-  ApiXProbeMoneyRoute: ApiXProbeMoneyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
