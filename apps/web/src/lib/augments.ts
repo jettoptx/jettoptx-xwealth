@@ -13,11 +13,17 @@ export type AugmentListing = {
   /** Public X Money pay URL */
   payUrl: string;
   kind: "pay" | "transfer";
-  /** Default tip / page amount in USDC */
-  defaultAmount: string;
+  /**
+   * Default tip / page amount in USDC.
+   * null = amount unknown (live graph rows before probe; do not display "0.10" as a fact).
+   */
+  defaultAmount: string | null;
   network: "solana";
   asset: "USDC";
-  /** Which harnesses the listing advertises as wired */
+  /**
+   * Which harnesses the listing advertises as wired.
+   * Empty array = unknown (live graph rows where harness info was not fetched).
+   */
   harnesses: Array<"grok-build" | "hermes" | "claude">;
   followers: number;
   following: number;
@@ -321,10 +327,10 @@ export function personToListing(p: {
     bio: p.bio || `X profile · @${p.handle}`,
     payUrl: p.payUrl || `https://x.com/i/money/pay/${p.handle}`,
     kind: "pay",
-    defaultAmount: "0.10",
+    defaultAmount: null,
     network: "solana",
     asset: "USDC",
-    harnesses: ["grok-build"],
+    harnesses: [],
     followers: p.followers,
     following: p.following,
     tags,

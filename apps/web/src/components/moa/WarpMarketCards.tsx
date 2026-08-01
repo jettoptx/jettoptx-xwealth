@@ -15,6 +15,7 @@ import {
   type AugmentListing,
 } from "@/lib/augments";
 import {
+  buildVibeDmUrl,
   loadXSession,
   normalizeHandle,
   saveMarketMode,
@@ -457,7 +458,7 @@ export function WarpMarketFloatingCards({
                 )}
               </ul>
               <p className="shrink-0 border-t border-white/10 px-2 py-1 font-mono text-[8px] text-white/35">
-                Right-click → VIBE
+                Right-click → VIBE · click peer node → Start VIBE → X DM
               </p>
             </div>
           )}
@@ -553,6 +554,32 @@ export function WarpMarketFloatingCards({
                 onClick={() => onVibe(selected)}
               >
                 Add to VIBE
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 w-full border-sky-400/35 bg-sky-500/10 text-[10px] text-sky-200 hover:bg-sky-500/20"
+                title={`Open X DM compose with VIBE message for @${selected.handle}`}
+                onClick={() => {
+                  onVibe(selected);
+                  const from =
+                    user?.handle || loadXSession()?.handle || "you";
+                  const vibeLink = `${window.location.origin}/warp?vibe=@${normalizeHandle(selected.handle)}`;
+                  const { url, text } = buildVibeDmUrl({
+                    fromHandle: from,
+                    toHandle: selected.handle,
+                    vibeLink,
+                  });
+                  void navigator.clipboard.writeText(text).catch(() => {});
+                  window.open(url, "_blank", "noopener,noreferrer");
+                  toast.success("Opening X DM · message copied", {
+                    description: `Send to @${normalizeHandle(selected.handle)} in the recipient field`,
+                    duration: 5000,
+                  });
+                }}
+              >
+                Start VIBE → X DM ✉
               </Button>
             </div>
           ) : (

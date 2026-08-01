@@ -116,6 +116,26 @@ img[src*="jtx-dao-rounded"] {
 }
 
 @layer utilities {
+  /* Thin OS-native scrollbar — used in sidebar panels and log views */
+  .thin-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255 255 255 / 0.18) transparent;
+  }
+  .thin-scroll::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .thin-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .thin-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255 255 255 / 0.18);
+    border-radius: 9999px;
+  }
+  .thin-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255 255 255 / 0.32);
+  }
+
   .font-display {
     font-family: var(--font-display);
   }

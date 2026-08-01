@@ -253,6 +253,30 @@ export function removeVibeInvite(toHandle: string, fromHandle?: string) {
   window.dispatchEvent(new Event('xwealth-market-updated'))
 }
 
+/**
+ * Build the X DM compose URL and prefilled message text for a VIBE invite.
+ *
+ * Gap: X's compose URL requires a numeric `recipient_id` to pre-fill the
+ * recipient — we cannot derive that from a handle alone. The URL pre-fills the
+ * *message text* only; the user must type/select @toHandle in the DM field.
+ * If `session.userId` becomes available in a future auth flow, swap in:
+ *   `https://x.com/messages/compose?recipient_id=${userId}&text=${encoded}`
+ */
+export function buildVibeDmUrl(opts: {
+  fromHandle: string
+  toHandle: string
+  /** Back-link embedded in the message (defaults to X Money pay link for toHandle) */
+  vibeLink?: string
+}): { url: string; text: string } {
+  const from = normalizeHandle(opts.fromHandle)
+  const to = normalizeHandle(opts.toHandle)
+  const link =
+    opts.vibeLink ?? `https://x.com/i/money/pay/${encodeURIComponent(to)}`
+  const text = `@${from} wants to pay you — click here to start vibes: ${link}`
+  const url = `https://x.com/messages/compose?text=${encodeURIComponent(text)}`
+  return { url, text }
+}
+
 /* ── Hidden / removed marketplace nodes (persist until restore) ─────────── */
 
 export function loadHiddenMarketNodes(): string[] {

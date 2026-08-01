@@ -93,56 +93,54 @@ function ConsolePage() {
           <HarnessPanel />
         </div>
         <X402Panel />
+        <Card className="border-augment/30 bg-surface">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Cpu className="size-4 text-augment" />
+              Agent plugin (post-login option)
+            </CardTitle>
+            <CardDescription className="text-xs leading-relaxed">
+              The outer product is this site. The{" "}
+              <strong className="text-fg/90">jettoptx-xwealth</strong> agent
+              plugin (JTX ≥1 gate, dry-run CLI, Grok/Hermes skills) lives in
+              this repo and runs without Privy — install it for harnesses.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <a
+                href={OPTX_LINKS.plugin}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5"
+              >
+                Open plugin repo
+                <ExternalLink className="size-3.5" />
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="secondary">
+              <a
+                href={OPTX_LINKS.pluginInstall}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Install / gate
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a href={OPTX_LINKS.pluginGrok} target="_blank" rel="noreferrer">
+                Grok plugin docs
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="ghost">
+              <Link to="/augments" search={{ embed: undefined }}>
+                Back to Augments map
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
         <div className="lg:col-span-2">
           <OnrampPanel />
-        </div>
-        <div className="lg:col-span-2">
-          <Card className="border-augment/30 bg-surface">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Cpu className="size-4 text-augment" />
-                Agent plugin (post-login option)
-              </CardTitle>
-              <CardDescription className="text-xs leading-relaxed">
-                The outer product is this site. The{" "}
-                <strong className="text-fg/90">jettoptx-xwealth</strong> agent
-                plugin (JTX ≥1 gate, dry-run CLI, Grok/Hermes skills) lives in a
-                separate repo and runs without Privy — install it for harnesses.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              <Button asChild size="sm">
-                <a
-                  href={OPTX_LINKS.plugin}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5"
-                >
-                  Open plugin repo
-                  <ExternalLink className="size-3.5" />
-                </a>
-              </Button>
-              <Button asChild size="sm" variant="secondary">
-                <a
-                  href={OPTX_LINKS.pluginInstall}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Install / gate
-                </a>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <a href={OPTX_LINKS.pluginGrok} target="_blank" rel="noreferrer">
-                  Grok plugin docs
-                </a>
-              </Button>
-              <Button asChild size="sm" variant="ghost">
-                <Link to="/augments" search={{ embed: undefined }}>
-                  Back to Augments map
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </main>

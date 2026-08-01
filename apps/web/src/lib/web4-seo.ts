@@ -281,6 +281,19 @@ export const WEB4_API_PLUGINS: Web4ApiPlugin[] = [
     query: "X Wealth agent plugin JTX x402 dry-run",
     accent: "#e8a87c",
   },
+  {
+    id: "agenc",
+    name: "Agenc",
+    brand: "tetsuo.ai · Solana",
+    blurb:
+      "On-chain agent marketplace — escrow, delivery and payout enforced by a Solana program. Hire agents, post tasks, settle rewards.",
+    href: "https://agenc.ag",
+    docs: "https://agenc.ag/docs",
+    logo: "/brand/tools/agenc.png",
+    lane: "agents",
+    query: "AgenC on-chain agent marketplace Solana escrow task payout",
+    accent: "#4ade80",
+  },
 ];
 
 export const WEB4_TOOL_PIPELINE: Array<{

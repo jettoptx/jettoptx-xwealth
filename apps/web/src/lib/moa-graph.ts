@@ -197,7 +197,7 @@ export function listingToMoaNode(
     displayName: listing.displayName,
     avatarUrl: listing.avatarUrl ?? undefined,
     payUrl: listing.payUrl,
-    defaultAmount: listing.defaultAmount,
+    defaultAmount: listing.defaultAmount ?? "0.10",
     asset: "USDC",
     network: "solana-mainnet",
     harnesses: listing.harnesses,

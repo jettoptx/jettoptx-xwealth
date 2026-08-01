@@ -72,8 +72,8 @@ export function postLoginHref(): string {
       host === "localhost" ||
       host === "127.0.0.1"
     ) {
-      return "/console";
+      return "/dojo";
     }
   }
-  return "https://xwealth.space/console";
+  return "https://xwealth.space/dojo";
 }

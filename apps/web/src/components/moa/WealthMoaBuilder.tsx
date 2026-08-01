@@ -35,6 +35,7 @@ import {
 } from '@/lib/wealth-moa-seed'
 import {
   buildMarketplaceGraph,
+  buildVibeDmUrl,
   canRemoveMarketNode,
   clearHiddenMarketNodes,
   clearXSession,
@@ -2216,6 +2217,40 @@ export function WealthMoaBuilder() {
             })
             setVibeInvites(loadVibeInvites())
           }}
+          onStartVibeDm={(toHandle) => {
+            const from = xSession?.handle || loadXSession()?.handle
+            if (!from) {
+              setShowXAuth(true)
+              return
+            }
+            // Ensure invite exists so it shows on the graph
+            const existing = loadVibeInvites().find(
+              (v) =>
+                normalizeHandle(v.toHandle) === normalizeHandle(toHandle) &&
+                normalizeHandle(v.fromHandle) === normalizeHandle(from),
+            )
+            if (!existing) {
+              saveVibeInvite({
+                fromHandle: from,
+                toHandle,
+                listingId: `mkt-peer-${normalizeHandle(toHandle).toLowerCase()}`,
+              })
+              setVibeInvites(loadVibeInvites())
+            }
+            // Build DM text with back-link to this WARP vibe view
+            const vibeLink = `${window.location.origin}/warp?vibe=@${normalizeHandle(toHandle)}`
+            const { url, text } = buildVibeDmUrl({
+              fromHandle: from,
+              toHandle,
+              vibeLink,
+            })
+            void navigator.clipboard.writeText(text).catch(() => {})
+            window.open(url, '_blank', 'noopener,noreferrer')
+            toast.success(`Opening X DM · message copied`, {
+              description: `Send to @${normalizeHandle(toHandle)} in the recipient field`,
+              duration: 5000,
+            })
+          }}
         />
       ) : (
         <GuideSidebar
@@ -2961,6 +2996,7 @@ function DetailCard({
   onJump,
   onOpenPayGlass,
   onVibePeer,
+  onStartVibeDm,
 }: {
   node: SimNode
   nodeIds: string[]
@@ -2997,6 +3033,8 @@ function DetailCard({
   onJump: (id: string) => void
   onOpenPayGlass?: () => void
   onVibePeer?: (handle: string, payUrl?: string | null, note?: string) => void
+  /** Open X DM compose with pre-filled VIBE message for this peer */
+  onStartVibeDm?: (handle: string) => void
 }) {
   const agt = colorForNode(node)
   const idx = Math.max(0, nodeIds.indexOf(node.id))
@@ -3453,6 +3491,16 @@ npm run check-jtx
                 VIBE · connect nodes
               </button>
             )}
+            {xSession && peerHandle && onStartVibeDm && (
+              <button
+                type="button"
+                onClick={() => onStartVibeDm(peerHandle)}
+                className="w-full rounded-lg border border-sky-400/35 bg-sky-500/10 py-2 text-[11px] font-medium text-sky-200 hover:bg-sky-500/20"
+                title={`Open X DM compose pre-filled with a VIBE message for @${peerHandle}`}
+              >
+                Start VIBE → X DM ✉
+              </button>
+            )}
             {(href || peerHandle) && (
               <a
                 href={href || `https://x.com/${peerHandle}`}
@@ -3875,7 +3923,7 @@ function GuideSidebar({
 }) {
   return (
     <LeftSidebarShell expandSignal={expandSignal}>
-      <div className="p-4">
+      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4">
         <p className="text-[9px] uppercase tracking-[0.16em] text-white/55">
           Getting started
         </p>

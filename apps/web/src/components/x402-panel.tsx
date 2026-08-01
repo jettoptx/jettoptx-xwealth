@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useCreateWallet,
   usePrivy,
   useSignMessage,
   useWallets,
 } from "@privy-io/react-auth";
-import { FlaskConical, Loader2, ShieldAlert, Zap } from "lucide-react";
+import { FlaskConical, Loader2, ShieldAlert, Smartphone, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,12 +23,15 @@ import {
   buildPaymentRequired,
   encodePaymentRequired,
   encodePaymentSignature,
+  USDC_MINT_SOLANA,
   type X402SettleResult,
 } from "@/lib/x402";
 import { buildX402SignMessage } from "@/lib/privy-pay-sign";
 import { useWealthStore } from "@/lib/store";
 import { privyEnabled } from "@/lib/auth/privy";
 import { cn } from "@/lib/utils";
+import { MojoSignQrModal } from "@/components/mojo-sign-qr";
+import type { SignTxMeta } from "@/lib/mojo-sign-challenge";
 
 type PayMode = "dry" | "live";
 
@@ -44,12 +47,35 @@ export function X402Panel() {
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<X402SettleResult | null>(null);
   const [log, setLog] = useState<string[]>([]);
+  const [mojoOpen, setMojoOpen] = useState(false);
+  const [mojoSig, setMojoSig] = useState<string | null>(null);
 
   // Privy wallet hooks — only used on REAL path
   const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const { signMessage } = useSignMessage();
   const { createWallet } = useCreateWallet();
+
+  /** Mojo QR spend meta — destination should be a Solana pubkey when available. */
+  const mojoTx: SignTxMeta | null = useMemo(() => {
+    if (!money) return null;
+    return {
+      amount: amount.trim() || "0.10",
+      mint: USDC_MINT_SOLANA,
+      asset: "USDC",
+      // Prefer SOL payTo when linked; fall back to X Money URL (metadata only).
+      payTo: money.transferUrl,
+      destination: walletStore || null,
+      network: "solana-mainnet",
+      memo: `xwealth x402 @${money.handle}`,
+      resource:
+        typeof window !== "undefined"
+          ? `${window.location.origin}/api/x402/pay`
+          : "/api/x402/pay",
+      // TODO: attach base64 unsigned USDC transfer for phone signing
+      unsignedTx: null,
+    };
+  }, [money, amount, walletStore]);
 
   function push(line: string) {
     setLog((L) => [line, ...L].slice(0, 14));
@@ -369,23 +395,45 @@ export function X402Panel() {
               className="max-w-[160px]"
             />
           </div>
-          <Button
-            type="button"
-            variant={mode === "live" ? "default" : "accent"}
-            className={cn(
-              mode === "live" && "bg-amber-600 text-white hover:bg-amber-500",
-            )}
-            disabled={!money || busy || (mode === "live" && !liveConfirm)}
-            onClick={() => void runPay()}
-          >
-            {busy ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Zap className="size-4" />
-            )}
-            {mode === "live" ? "Sign & Pay now" : "Run agent pay"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant={mode === "live" ? "default" : "accent"}
+              className={cn(
+                mode === "live" && "bg-amber-600 text-white hover:bg-amber-500",
+              )}
+              disabled={!money || busy || (mode === "live" && !liveConfirm)}
+              onClick={() => void runPay()}
+            >
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Zap className="size-4" />
+              )}
+              {mode === "live" ? "Sign & Pay now" : "Run agent pay"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!money || !mojoTx}
+              onClick={() => setMojoOpen(true)}
+              title="Approve Solana USDC spend via MOJO QR (same rail as jtx.chat/login)"
+            >
+              <Smartphone className="size-4" />
+              MOJO QR
+            </Button>
+          </div>
         </div>
+
+        {mojoSig && (
+          <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 font-mono text-xs">
+            <div className="text-orange-300">MOJO signed</div>
+            <div className="mt-1 break-all">{mojoSig}</div>
+            <div className="mt-1 text-subtle">
+              TODO: attach unsignedTx + broadcast signedTx via Helius for settle
+            </div>
+          </div>
+        )}
 
         {last && (
           <div
@@ -461,6 +509,21 @@ export function X402Panel() {
           </div>
         )}
       </CardContent>
+
+      {mojoTx && (
+        <MojoSignQrModal
+          open={mojoOpen}
+          onClose={() => setMojoOpen(false)}
+          tx={mojoTx}
+          origin="xwealth"
+          onSigned={(r) => {
+            setMojoSig(r.signature);
+            push(`← MOJO signed ${r.signature.slice(0, 18)}…`);
+            toast.success("MOJO signed spend");
+            setMojoOpen(false);
+          }}
+        />
+      )}
     </Card>
   );
 }

@@ -193,6 +193,8 @@ function AugmentsPage() {
     WEB4_SEO.defaultQueries[0]?.query ?? "X Money agent payments",
   );
   const [discoverBusy, setDiscoverBusy] = useState(false);
+  /** Which plugin card's Run triggered the current discover (null = Discover panel itself) */
+  const [runningPluginId, setRunningPluginId] = useState<string | null>(null);
   const [discover, setDiscover] = useState<SearchPayload | null>(null);
   const [cryptoHits, setCryptoHits] = useState<CryptoSearchPayload | null>(
     null,
@@ -606,7 +608,7 @@ function AugmentsPage() {
                         <ApiPluginTile
                           key={plugin.id}
                           plugin={plugin}
-                          busy={discoverBusy}
+                          busy={runningPluginId === plugin.id}
                           compact
                           onDiscover={() => {
                             if (plugin.lane) {
@@ -615,13 +617,14 @@ function AugmentsPage() {
                               setCryptoHits(null);
                             }
                             if (plugin.query) setDiscoverQ(plugin.query);
+                            setRunningPluginId(plugin.id);
                             void runDiscover({
                               query: plugin.query,
                               laneOverride: plugin.lane,
                               mode:
                                 plugin.lane === "defi" ? "defi" : undefined,
                               purpose: `Web4 Discover via ${plugin.name}`,
-                            });
+                            }).finally(() => setRunningPluginId(null));
                           }}
                         />
                       ))}
@@ -639,7 +642,7 @@ function AugmentsPage() {
                     title="Directory"
                     subtitle={`${filtered.length} listings · ${tab}${
                       liveCount ? ` · ${liveCount} graph` : ""
-                    } · Money ✓${moneyYes} / ✗${moneyNo} / ?${moneyUnknown}`}
+                    } · Money ✓${moneyYes} confirmed / ✗${moneyNo} none / ?${moneyUnknown} unprobed`}
                     collapsed={collapsed.directory}
                     onToggle={() => togglePanel("directory")}
                     toolbar={
@@ -729,12 +732,18 @@ function AugmentsPage() {
                           <thead className="sticky top-0 z-[1] bg-elevated/95 backdrop-blur">
                             <tr className="border-b border-border font-mono text-[10px] uppercase tracking-wider text-subtle">
                               <th className="px-3 py-2 font-medium">Agent</th>
-                              <th className="px-3 py-2 font-medium">Money</th>
+                              <th className="px-3 py-2 font-medium">
+                                Money
+                                <span className="ml-1 normal-case text-muted/50">(probe)</span>
+                              </th>
                               <th className="hidden px-3 py-2 font-medium sm:table-cell">
                                 Followers
                               </th>
                               <th className="hidden px-3 py-2 font-medium md:table-cell">
                                 Rail
+                              </th>
+                              <th className="hidden px-3 py-2 font-medium lg:table-cell">
+                                Harness
                               </th>
                               <th className="px-3 py-2 text-right font-medium">
                                 â˜…
@@ -862,7 +871,7 @@ function AugmentsPage() {
                           }
                           onClick={() => void runDiscover()}
                         >
-                          {discoverBusy ? (
+                          {discoverBusy && !runningPluginId ? (
                             <Loader2 className="size-3.5 animate-spin" />
                           ) : (
                             <Search className="size-3.5" />
@@ -942,8 +951,8 @@ function AugmentsPage() {
                               {graph.followers.length} followers
                               <br />
                               <span className="text-subtle">
-                                Money ✓{moneyYes} · ✗{moneyNo} · ?{moneyUnknown}{" "}
-                                — “graph” ≠ X Money. Probe Money on Directory.
+                                Money ✓{moneyYes} confirmed · ✗{moneyNo} none · ?{moneyUnknown} unprobed
+                                — graph ≠ X Money. Probe Money in Directory to resolve.
                               </span>
                             </p>
                           ) : (
@@ -1266,7 +1275,7 @@ function MoneyBadge({ value }: { value?: boolean | null }) {
         className="border-emerald-500/40 bg-emerald-500/15 font-mono text-[10px] text-emerald-300"
         title="X Money pay surface detected (TinyFish / HTML probe)"
       >
-        X Money
+        ✓ Money
       </Badge>
     );
   }
@@ -1274,20 +1283,20 @@ function MoneyBadge({ value }: { value?: boolean | null }) {
     return (
       <Badge
         variant="outline"
-        className="font-mono text-[10px] text-subtle"
-        title="Probe says this handle has no X Money pay surface"
+        className="border-rose-500/30 font-mono text-[10px] text-rose-400/80"
+        title="Probed — no X Money pay surface found for this handle"
       >
-        No Money
+        ✗ No Money
       </Badge>
     );
   }
   return (
     <Badge
       variant="outline"
-      className="font-mono text-[10px] text-muted"
-      title="Not probed yet — use Probe Money (TinyFish). X has no public API for Money enrollment."
+      className="cursor-help border-dashed font-mono text-[10px] text-muted/60"
+      title="Not probed yet. Click 'Probe Money' to check. X has no public API for Money enrollment."
     >
-      Money ?
+      ? Unprobed
     </Badge>
   );
 }
@@ -1459,10 +1468,14 @@ function ListingTableRow({
         </span>
       </td>
       <td className="hidden px-3 py-2.5 font-mono text-xs text-muted md:table-cell">
-        {item.defaultAmount} {item.asset}
+        {item.defaultAmount
+          ? `${item.defaultAmount} ${item.asset}`
+          : <span className="text-subtle/50">—</span>}
       </td>
       <td className="hidden max-w-[10rem] truncate px-3 py-2.5 font-mono text-[10px] text-subtle lg:table-cell">
-        {item.harnesses.join(" Â· ")}
+        {item.harnesses.length > 0
+          ? item.harnesses.join(" · ")
+          : <span className="text-muted/40">—</span>}
       </td>
       <td className="px-3 py-2.5 text-right">
         <button
@@ -1547,18 +1560,30 @@ function AgentPayCard({
             {item.payUrl}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            <Badge variant="outline" className="font-mono">
-              {item.defaultAmount} {item.asset}
-            </Badge>
+            {item.defaultAmount ? (
+              <Badge variant="outline" className="font-mono">
+                {item.defaultAmount} {item.asset}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="font-mono text-muted/50">
+                amount unknown
+              </Badge>
+            )}
             <Badge variant="outline" className="font-mono">
               {item.network}
             </Badge>
-            {item.harnesses.map((h) => (
-              <Badge key={h} variant="default" className="gap-1">
-                <Bot className="size-3" />
-                {h}
+            {item.harnesses.length > 0 ? (
+              item.harnesses.map((h) => (
+                <Badge key={h} variant="default" className="gap-1">
+                  <Bot className="size-3" />
+                  {h}
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="outline" className="font-mono text-muted/50">
+                harness unknown
               </Badge>
-            ))}
+            )}
           </div>
         </div>
 
@@ -1592,7 +1617,7 @@ function AgentPayCard({
             className="w-full border-augment/40 text-augment hover:bg-augment/10"
             onClick={() => {
               void copyText(
-                `Page @${item.handle} via X Wealth x402 Â· ${item.payUrl} Â· ${item.defaultAmount} USDC Solana`,
+                `Page @${item.handle} via X Wealth x402 · ${item.payUrl}${item.defaultAmount ? ` · ${item.defaultAmount} USDC Solana` : " · Solana"}`,
               ).then(() => toast.success("Agent page payload copied"));
             }}
           >

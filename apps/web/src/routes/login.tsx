@@ -91,8 +91,8 @@ function LoginPage() {
   const { user, isPending } = useCurrentUserState();
 
   if (!isPending && user) {
-    // Post-login home = console (xwealth.space)
-    return <Navigate to="/moa" />;
+    // Post-login home = dojo
+    return <Navigate to="/dojo" />;
   }
 
   return (
@@ -283,7 +283,7 @@ function BetterAuthLoginPanel() {
                 : "flex w-full items-center justify-center gap-2 rounded-xl border border-white/12 bg-[#141414] py-3 text-[13px] font-medium text-white/90"
             }
             onClick={() =>
-              void signIn(p.providerId, { callbackURL: "/moa" })
+              void signIn(p.providerId, { callbackURL: "/dojo" })
             }
           >
             {isX ? (
