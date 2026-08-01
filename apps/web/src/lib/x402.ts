@@ -2,7 +2,15 @@
  * x402-style payment envelopes for agent harnesses.
  * Protocol shape follows Coinbase x402 (HTTP 402 + payment headers).
  * Modes: dry-run (default) | live intent (REAL — opens X Money; facilitator optional).
+ * On-chain broadcast (when harness attaches a serialized Solana tx) goes through Helius.
  */
+
+import {
+  heliusConfigured,
+  heliusHealth,
+  rpcProviderLabel,
+  sendRawTransactionBase64,
+} from "@/lib/helius-rpc";
 
 export const X402_NETWORK = "solana-mainnet" as const;
 export const X402_ASSET = "USDC" as const;
@@ -49,6 +57,11 @@ export type X402PaymentPayload = {
     resource: string;
     timestamp: string;
     dryRun: boolean;
+    /**
+     * Optional base64-encoded signed Solana transaction.
+     * When present on LIVE settle, server broadcasts via Helius sendTransaction.
+     */
+    serializedTransaction?: string;
   };
 };
 
@@ -66,6 +79,16 @@ export type X402SettleResult = {
   note: string;
   /** When live and no on-chain facilitator — operator completes on X */
   actionUrl?: string;
+  /** Helius / Solana RPC rail used for this settle */
+  rpc?: {
+    provider: string;
+    configured: boolean;
+    slot?: number;
+    health?: string;
+    /** True when a serialized tx was broadcast on-chain */
+    onChain?: boolean;
+    chainSignature?: string;
+  };
 };
 
 export function buildPaymentRequired(opts: {
@@ -175,11 +198,17 @@ export function encodePaymentSignature(payload: X402PaymentPayload): string {
   return utf8ToBase64(JSON.stringify(payload));
 }
 
-export function settlePayment(
+/**
+ * Settle an x402 PAYMENT-SIGNATURE.
+ * - dry-run: receipt only (still probes Helius health when configured)
+ * - live + serializedTransaction: broadcast via Helius sendTransaction
+ * - live without tx: intent recorded + X Money actionUrl (operator / harness)
+ */
+export async function settlePayment(
   required: X402PaymentRequired,
   signedHeader: string,
   opts?: { allowLive?: boolean },
-): X402SettleResult | { success: false; error: string } {
+): Promise<X402SettleResult | { success: false; error: string }> {
   let payload: X402PaymentPayload;
   try {
     payload = JSON.parse(base64ToUtf8(signedHeader)) as X402PaymentPayload;
@@ -204,6 +233,18 @@ export function settlePayment(
     };
   }
 
+  const configured = heliusConfigured();
+  let tip: Awaited<ReturnType<typeof heliusHealth>> | null = null;
+  if (configured) {
+    tip = await heliusHealth();
+  }
+  const rpcMeta = {
+    provider: tip?.rpc ?? rpcProviderLabel(),
+    configured,
+    slot: tip?.slot,
+    health: tip?.health,
+  };
+
   if (isDry) {
     return {
       success: true,
@@ -215,12 +256,56 @@ export function settlePayment(
       payTo: accept.payTo,
       xHandle: accept.extra.xHandle,
       settledAt: new Date().toISOString(),
-      note: "Dry-run only — no on-chain settlement. Ready for facilitator wiring.",
+      note: configured
+        ? `Dry-run only — no on-chain send. Helius rail ready (${rpcMeta.provider}${
+            tip?.slot != null ? ` · slot ${tip.slot}` : ""
+          }).`
+        : "Dry-run only — no on-chain settlement. Set HELIUS_API_KEY / SOLANA_RPC_URL for live broadcast.",
+      rpc: { ...rpcMeta, onChain: false },
     };
   }
 
-  // LIVE intent: real x402 envelope accepted; settlement = X Money pay surface
-  // (facilitator can replace this when X402_FACILITATOR_URL is configured)
+  // LIVE: optional on-chain broadcast when harness attaches a signed Solana tx
+  const rawTx = payload.payload.serializedTransaction?.trim();
+  if (rawTx) {
+    if (!configured) {
+      return {
+        success: false,
+        error:
+          "Live on-chain send requires HELIUS_API_KEY or SOLANA_RPC_URL on the server",
+      };
+    }
+    const sent = await sendRawTransactionBase64(rawTx);
+    if (!sent.ok) {
+      return {
+        success: false,
+        error: `Helius sendTransaction failed: ${sent.error}`,
+      };
+    }
+    return {
+      success: true,
+      dryRun: false,
+      live: true,
+      transaction: sent.signature,
+      network: X402_NETWORK,
+      amount: payload.payload.amount,
+      asset: X402_ASSET,
+      payTo: accept.payTo,
+      xHandle: accept.extra.xHandle,
+      settledAt: new Date().toISOString(),
+      actionUrl: accept.payTo,
+      note: `LIVE · USDC tx broadcast on Solana via ${sent.rpc}. Signature ${sent.signature.slice(0, 12)}…`,
+      rpc: {
+        ...rpcMeta,
+        provider: sent.rpc,
+        onChain: true,
+        chainSignature: sent.signature,
+      },
+    };
+  }
+
+  // LIVE intent without serialized tx: wallet/message signed; complete on X Money
+  // (or re-submit with payload.serializedTransaction for Helius broadcast)
   return {
     success: true,
     dryRun: false,
@@ -233,16 +318,20 @@ export function settlePayment(
     xHandle: accept.extra.xHandle,
     settledAt: new Date().toISOString(),
     actionUrl: accept.payTo,
-    note:
-      "LIVE intent recorded. Complete payment on X Money (USDC/Solana). On-chain facilitator not yet attached — pay link opened for operator.",
+    note: configured
+      ? `LIVE intent recorded · Helius ready (${rpcMeta.provider}${
+          tip?.slot != null ? ` · slot ${tip.slot}` : ""
+        }). No serialized Solana tx attached — open X Money or resubmit with payload.serializedTransaction for on-chain send.`
+      : "LIVE intent recorded. Complete payment on X Money (USDC/Solana). Configure Helius for on-chain broadcast.",
+    rpc: { ...rpcMeta, onChain: false },
   };
 }
 
 /** @deprecated use settlePayment */
-export function settleDryRun(
+export async function settleDryRun(
   required: X402PaymentRequired,
   signedHeader: string,
-): X402SettleResult | { success: false; error: string } {
+): Promise<X402SettleResult | { success: false; error: string }> {
   return settlePayment(required, signedHeader, { allowLive: false });
 }
 

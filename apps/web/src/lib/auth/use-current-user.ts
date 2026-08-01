@@ -1,6 +1,7 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { authClient, authEnabled } from "./client";
 import { privyEnabled } from "./privy";
+import { resolveAvatarUrl } from "./profile-image";
 import { inferXHandle } from "@/lib/xmoney";
 
 /** Normalized user shape used across the app, auth on or off. */
@@ -28,7 +29,7 @@ export const DEV_USER: AppUser = {
   id: "dev-user",
   displayName: "Dev User",
   primaryEmail: "dev@example.com",
-  profileImageUrl: null,
+  profileImageUrl: resolveAvatarUrl(null),
   handle: "devuser",
   isDevFallback: true,
 };
@@ -59,7 +60,8 @@ function toAppUser(user: SessionUser): AppUser {
     id: user.id,
     displayName: user.name ?? null,
     primaryEmail: user.email ?? null,
-    profileImageUrl: user.image ?? null,
+    // Only keep remote images when present; otherwise JOE default
+    profileImageUrl: resolveAvatarUrl(user.image),
     handle: inferXHandle({
       username,
       displayName: user.name ?? null,
@@ -92,7 +94,9 @@ function usePrivyUserState(): CurrentUserState {
       ? `${user.wallet.address.slice(0, 6)}…${user.wallet.address.slice(-4)}`
       : null);
 
-  const profileImageUrl = twitter?.profilePictureUrl ?? null;
+  // X users: pull profile photo. Everyone else (Apple/Google/GitHub/email/wallet):
+  // JOE default avatar — do not use letter monograms.
+  const profileImageUrl = resolveAvatarUrl(twitter?.profilePictureUrl ?? null);
 
   const appUser: AppUser = {
     id: user.id,

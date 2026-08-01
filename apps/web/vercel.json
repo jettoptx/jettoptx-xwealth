@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    { "source": "/dojo", "destination": "/augments", "permanent": false },
+    { "source": "/DOJO", "destination": "/augments", "permanent": false },
+    { "source": "/Dojo", "destination": "/augments", "permanent": false },
+    { "source": "/dojo/:path*", "destination": "/augments", "permanent": false },
+    { "source": "/warp", "destination": "/augments", "permanent": false },
+    { "source": "/WARP", "destination": "/augments", "permanent": false },
+    { "source": "/Warp", "destination": "/augments", "permanent": false },
+    { "source": "/warp/:path*", "destination": "/augments", "permanent": false },
+    { "source": "/moa", "destination": "/augments", "permanent": false }
+  ]
+}
+

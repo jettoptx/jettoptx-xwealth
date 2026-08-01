@@ -1,43 +1,53 @@
 # Repos to install
 
-## Architecture (2026-07-30)
+## Architecture (2026-07-31)
 
-| Layer | Repo | Role |
-|-------|------|------|
-| **OUTSIDE** | **[jettoptx/xwealth](https://github.com/jettoptx/xwealth)** | Public product shell · **xwealth.space** · Privy login · augments map · pay console |
-| **INSIDE** | **This repo** (`jettoptx/jettoptx-xwealth`) | Agent plugin option after login · skills · dry-run CLI · JTX ≥1 · **no Privy** |
+| Layer | Location | Role |
+|-------|----------|------|
+| **Web product** | **`apps/web` in this repo** | Public product shell · **xwealth.space** · Privy login · augments marketplace · pay console · WARP/MOA |
+| **Agent plugin** | **This repo root** | Skills · dry-run CLI · JTX ≥1 gate · **no Privy** |
 
-## Minimum (agent plugin beta)
+**Canonical repo:** [jettoptx/jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth)
+
+Former outer-shell repo [jettoptx/xwealth](https://github.com/jettoptx/xwealth) is **folded into `apps/web`** — do not clone it as a separate product tree.
+
+## Minimum
 
 ```bash
 git clone https://github.com/jettoptx/jettoptx-xwealth.git
 cd jettoptx-xwealth
 ```
 
-| Repo | Role |
+| Path | Role |
 |------|------|
-| **[jettoptx/jettoptx-xwealth](https://github.com/jettoptx/jettoptx-xwealth)** | Agent plugin, skills, dry-run CLI, Grok plugin (this root) |
-| **[jettoptx/xwealth](https://github.com/jettoptx/xwealth)** | Outer web product on xwealth.space |
+| **repo root** | Agent plugin, skills, dry-run CLI, Grok plugin |
+| **`apps/web`** | Outer web product on xwealth.space |
 
-## Web UI (outer shell — not this root)
+## Web UI (`apps/web`)
 
 | Surface | URL |
 |---------|-----|
 | **Production** | **https://xwealth.space** |
 | Login | https://xwealth.space/login |
 | Console (post-login) | https://xwealth.space/console |
-| Augments map | https://xwealth.space/augments |
+| Augments marketplace | https://xwealth.space/augments |
 
-After **Continue with X** on the **outer** app, users land on the console and can open **Agent plugin** (this repo) from Dashboard.
+```bash
+cd apps/web
+npm install
+npm run dev   # http://localhost:8080
+```
 
-Plugin / agent code stays at this repo root (`src/`, `skills/`, `scripts/`).  
-`apps/web` here is a mirror only — canonical outer UI is **jettoptx/xwealth**.
+After **Continue with X**, users land on the console and can open **Agent plugin** docs/install from Dashboard.
 
 ## Legacy
 
 | Host / repo | Status |
 |-------------|--------|
 | wealth.astroknots.space | **Retired** — use **xwealth.space** |
+| jettoptx/xwealth | **Folded** into `apps/web` · GitHub repo **archived** |
+| jett22JOE/jettoptx-xwealth | **Folded** into `apps/web` · GitHub repo **archived** |
+| Local mirrors (`*-xwealth-web`, `*-xwealth-public`, `*-xwealth-upstream`) | **Deleted** — use this clone only |
 
 ## Optional
 
@@ -58,18 +68,3 @@ grok plugin install jettoptx/jettoptx-xwealth --trust
 ```
 
 See [GROK-PLUGIN.md](./GROK-PLUGIN.md).
-
-## Auth split (important)
-
-| Surface | Auth |
-|---------|------|
-| **Agent plugin** (this root) | Solana wallet + **≥1 JTX** · optional X OAuth · **no Privy** |
-| **Web dashboard** (`apps/web` / xwealth.space) | **Privy** X-first for E𝕏hibit / product login · pay link is the money rail |
-
-## Safety
-
-- Public keys only in client env (`SOLANA_WALLET`, `VITE_PRIVY_APP_ID`).
-- Never commit keypairs or OAuth secrets.
-- Prefer official `jettoptx/*` sources.
-
-Full steps: [INSTALL.md](./INSTALL.md) · Dashboard: [apps/web/README.md](./apps/web/README.md) · Roadmap: [ROADMAP.md](./ROADMAP.md).

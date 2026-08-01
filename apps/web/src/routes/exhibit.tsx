@@ -135,12 +135,12 @@ function ExhibitPage() {
       <p className="text-xs text-subtle">
         Prototype inspired by{" "}
         <a
-          href="https://wealth.astroknots.space"
+          href="https://xwealth.space/augments"
           target="_blank"
           rel="noreferrer"
           className="hover:text-muted"
         >
-          wealth.astroknots.space
+          xwealth.space/augments
         </a>
         . This build is exhibit-ready dry-run (no live settle).
       </p>

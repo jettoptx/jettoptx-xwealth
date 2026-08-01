@@ -115,7 +115,8 @@ async function handle(request: Request): Promise<Response> {
 
   const allowLive =
     liveEnabled(request) || body.mode?.toLowerCase() === "live";
-  const result = settlePayment(envelope, signature, { allowLive });
+  // Async: dry-run probes Helius; LIVE may broadcast via sendTransaction
+  const result = await settlePayment(envelope, signature, { allowLive });
   if (!result.success) {
     return new Response(JSON.stringify(result), {
       status: 400,

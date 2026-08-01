@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { Navigate } from "@tanstack/react-router";
+import { Link, Navigate } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { authEnabled, signOut as betterAuthSignOut } from "./client";
 import { privyEnabled } from "./privy";
 import { useCurrentUser, useCurrentUserState } from "./use-current-user";
-import { avatarProxyUrl } from "./profile-image";
+import { avatarProxyUrl, DEFAULT_AVATAR_URL } from "./profile-image";
 
 /** Where `RedirectToSignIn` sends signed-out visitors. Create this route. */
 export const SIGN_IN_PATH = "/login";
@@ -56,44 +56,48 @@ function UserChip({
   profileImageUrl: string | null;
 }) {
   const proxied = avatarProxyUrl(profileImageUrl);
-  const direct = profileImageUrl;
+  const direct =
+    profileImageUrl && profileImageUrl !== DEFAULT_AVATAR_URL
+      ? profileImageUrl
+      : null;
+  // X CDN → proxy; local JOE default → direct path; never letter monogram
+  const src = proxied ?? direct ?? DEFAULT_AVATAR_URL;
 
   return (
     <div className="flex items-center gap-1 sm:gap-2">
-      {proxied || direct ? (
+      <Link
+        to="/settings"
+        title={`${label} · Settings`}
+        className="flex items-center gap-1.5 rounded-full outline-none ring-offset-bg focus-visible:ring-2 focus-visible:ring-augment/50"
+      >
         <img
-          src={proxied ?? direct!}
+          src={src}
           alt=""
           width={28}
           height={28}
           referrerPolicy="no-referrer"
-          title={label}
-          className="h-7 w-7 rounded-full border border-border bg-elevated object-cover sm:h-8 sm:w-8"
+          className="h-7 w-7 rounded-full border border-border bg-black object-cover sm:h-8 sm:w-8"
           onError={(e) => {
             const img = e.currentTarget;
-            if (direct && img.src !== direct && !img.dataset.fallback) {
-              img.dataset.fallback = "1";
+            // 1) proxy failed → try direct remote
+            if (direct && !img.dataset.triedDirect) {
+              img.dataset.triedDirect = "1";
               img.src = direct;
               return;
             }
-            img.style.display = "none";
-            const sib = img.nextElementSibling as HTMLElement | null;
-            if (sib) sib.hidden = false;
+            // 2) remote failed → JOE default
+            if (!img.dataset.triedDefault) {
+              img.dataset.triedDefault = "1";
+              img.src = DEFAULT_AVATAR_URL;
+            }
           }}
         />
-      ) : null}
-      <span
-        className="grid h-7 w-7 place-items-center rounded-full bg-elevated text-xs font-medium sm:h-8 sm:w-8 sm:text-sm"
-        hidden={Boolean(proxied || direct)}
-        title={label}
-      >
-        {label.charAt(0).toUpperCase()}
-      </span>
-      {!compact && (
-        <span className="hidden max-w-[7rem] truncate text-sm font-medium md:inline">
-          {label}
-        </span>
-      )}
+        {!compact && (
+          <span className="hidden max-w-[7rem] truncate text-sm font-medium md:inline">
+            {label}
+          </span>
+        )}
+      </Link>
       {privyEnabled ? (
         <PrivyLogoutButton />
       ) : authEnabled ? (

@@ -27,8 +27,15 @@ export type AugmentListing = {
   featured?: boolean;
   /** Seed relation for demo social graph around the signed-in user */
   relation?: AugmentRelation;
-  /** Optional remote avatar (may be blocked — UI falls back to monogram) */
+  /** Optional remote avatar (streamed via /api/avatar — UI falls back to monogram) */
   avatarUrl?: string | null;
+  /**
+   * Best-effort X Money enrollment.
+   * true = pay surface looks active, false = not available, null = unknown / not probed.
+   */
+  hasXMoney?: boolean | null;
+  /** true when row came from live X API graph for the signed-in user */
+  live?: boolean;
   accent?: string;
 };
 
@@ -49,7 +56,7 @@ export const AUGMENT_SEED: AugmentListing[] = [
     tags: ["encryption", "x402", "solana", "official"],
     featured: true,
     relation: "following",
-    accent: "#ff6900",
+    accent: "#34d399",
   },
   {
     id: "elonmusk",
@@ -205,8 +212,7 @@ export const AUGMENT_SEED: AugmentListing[] = [
     following: 880,
     tags: ["wealth", "prototype"],
     relation: "marketplace",
-    accent: "#ff6900",
-    avatarUrl: "/brand/astroknots-icon.png",
+    accent: "#34d399",
   },
   {
     id: "devrel",
@@ -289,4 +295,96 @@ export const MARKETPLACE_TAGS = [
   "grok",
   "encryption",
   "developers",
+  "x-money",
+  "live",
 ] as const;
+
+/** Convert a live X graph person into an Augment listing card. */
+export function personToListing(p: {
+  id: string;
+  handle: string;
+  displayName: string;
+  bio: string;
+  avatarUrl: string | null;
+  followers: number;
+  following: number;
+  relation: "following" | "follower";
+  hasXMoney: boolean | null;
+  payUrl: string;
+}): AugmentListing {
+  const tags = ["live"];
+  if (p.hasXMoney === true) tags.push("x-money");
+  return {
+    id: `live-${p.relation}-${p.id}`,
+    handle: p.handle,
+    displayName: p.displayName || p.handle,
+    bio: p.bio || `X profile · @${p.handle}`,
+    payUrl: p.payUrl || `https://x.com/i/money/pay/${p.handle}`,
+    kind: "pay",
+    defaultAmount: "0.10",
+    network: "solana",
+    asset: "USDC",
+    harnesses: ["grok-build"],
+    followers: p.followers,
+    following: p.following,
+    tags,
+    relation: p.relation,
+    avatarUrl: p.avatarUrl,
+    hasXMoney: p.hasXMoney,
+    live: true,
+    accent: p.hasXMoney === true ? "#34d399" : "#a1a1aa",
+  };
+}
+
+/**
+ * Merge live followers/following with featured seed marketplace.
+ * Live rows win on handle collision for social tabs.
+ */
+export function mergeLiveGraph(
+  seed: AugmentListing[],
+  live: {
+    following: AugmentListing[];
+    followers: AugmentListing[];
+  } | null,
+): AugmentListing[] {
+  if (!live) return seed;
+  const byHandle = new Map<string, AugmentListing>();
+  for (const item of seed) {
+    byHandle.set(item.handle.toLowerCase(), item);
+  }
+  for (const item of [...live.following, ...live.followers]) {
+    const key = item.handle.toLowerCase();
+    const prev = byHandle.get(key);
+    if (prev?.featured) {
+      // Keep featured marketplace metadata but overlay live avatar + money + counts
+      byHandle.set(key, {
+        ...prev,
+        avatarUrl: item.avatarUrl ?? prev.avatarUrl,
+        hasXMoney: item.hasXMoney ?? prev.hasXMoney,
+        followers: item.followers || prev.followers,
+        following: item.following || prev.following,
+        bio: item.bio || prev.bio,
+        displayName: item.displayName || prev.displayName,
+        relation: item.relation ?? prev.relation,
+        live: true,
+        tags: Array.from(new Set([...prev.tags, "live", ...(item.hasXMoney ? ["x-money"] : [])])),
+      });
+    } else {
+      byHandle.set(key, item);
+    }
+  }
+  // Prefer live social graph first, then remaining featured seed
+  const liveIds = new Set(
+    [...live.following, ...live.followers].map((x) => x.handle.toLowerCase()),
+  );
+  const liveOrdered = [...live.following, ...live.followers].filter(
+    (item, i, arr) =>
+      arr.findIndex((x) => x.handle.toLowerCase() === item.handle.toLowerCase()) === i,
+  );
+  const seedRest = seed.filter((s) => !liveIds.has(s.handle.toLowerCase()));
+  // Rebuild live ordered from map (may have featured overlay)
+  const liveMerged = liveOrdered.map(
+    (l) => byHandle.get(l.handle.toLowerCase()) ?? l,
+  );
+  return [...liveMerged, ...seedRest];
+}

@@ -2,13 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { HarnessId } from "./harness";
 import type { MoneySetupStatus, XMoneyKind } from "./xmoney";
-import {
-  MOA_SEED_LINKS,
-  MOA_SEED_PROOFS,
-  normalizeHandle,
-  type MoaLink,
-  type MoaPublicProof,
-} from "./moa-graph";
 
 export type LinkedMoney = {
   handle: string;
@@ -45,10 +38,6 @@ type WealthState = {
   starredAugments: string[];
   /** Label for the custom harness card */
   customHarnessName: string;
-  /** Map of Augments — public edges (follow / delegate / paid) */
-  moaLinks: MoaLink[];
-  /** Map of Augments — public proofs (amounts truncated by default) */
-  moaProofs: MoaPublicProof[];
   setMoney: (money: LinkedMoney | null) => void;
   setMoneySetupStatus: (status: MoneySetupStatus) => void;
   setSolanaWallet: (w: string) => void;
@@ -57,8 +46,6 @@ type WealthState = {
   addReceipt: (r: Omit<DryRunReceipt, "id">) => void;
   clearReceipts: () => void;
   toggleStarAugment: (handle: string) => void;
-  upsertMoaLink: (link: MoaLink) => void;
-  recordMoaProof: (proof: MoaPublicProof, link?: MoaLink) => void;
 };
 
 const defaultHarnesses: Record<HarnessId, WiredHarness> = {
@@ -77,8 +64,6 @@ export const useWealthStore = create<WealthState>()(
       receipts: [],
       starredAugments: [],
       customHarnessName: "My Agent",
-      moaLinks: MOA_SEED_LINKS,
-      moaProofs: MOA_SEED_PROOFS,
       setMoney: (money) => set({ money }),
       setMoneySetupStatus: (setupStatus) =>
         set((s) =>
@@ -118,39 +103,11 @@ export const useWealthStore = create<WealthState>()(
               : [...s.starredAugments, h],
           };
         }),
-      upsertMoaLink: (link) =>
-        set((s) => {
-          const next = s.moaLinks.filter((l) => l.id !== link.id);
-          return { moaLinks: [link, ...next].slice(0, 200) };
-        }),
-      recordMoaProof: (proof, link) =>
-        set((s) => {
-          const proofs = [
-            proof,
-            ...s.moaProofs.filter((p) => p.id !== proof.id),
-          ].slice(0, 100);
-          let moaLinks = s.moaLinks;
-          if (link) {
-            moaLinks = [
-              link,
-              ...s.moaLinks.filter((l) => l.id !== link.id),
-            ].slice(0, 200);
-          }
-          return { moaProofs: proofs, moaLinks };
-        }),
     }),
     {
-      name: "xwealth-jettoptx-v4",
+      name: "xwealth-jettoptx-v3",
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<WealthState>;
-        const seededLinkIds = new Set(MOA_SEED_LINKS.map((l) => l.id));
-        const seededProofIds = new Set(MOA_SEED_PROOFS.map((pr) => pr.id));
-        const userLinks = (p.moaLinks ?? []).filter(
-          (l) => !seededLinkIds.has(l.id),
-        );
-        const userProofs = (p.moaProofs ?? []).filter(
-          (pr) => !seededProofIds.has(pr.id),
-        );
         return {
           ...current,
           ...p,
@@ -158,34 +115,8 @@ export const useWealthStore = create<WealthState>()(
             ...defaultHarnesses,
             ...(p.harnesses ?? {}),
           },
-          moaLinks: [...userLinks, ...MOA_SEED_LINKS].slice(0, 200),
-          moaProofs: [...userProofs, ...MOA_SEED_PROOFS].slice(0, 100),
         };
       },
     },
   ),
 );
-
-export function findMoaProof(
-  proofs: MoaPublicProof[],
-  proofId: string | null | undefined,
-): MoaPublicProof | undefined {
-  if (!proofId) return undefined;
-  return proofs.find((p) => p.id === proofId);
-}
-
-export function hasMoaLink(
-  links: MoaLink[],
-  fromHandle: string,
-  toHandle: string,
-  kind?: MoaLink["kind"],
-): boolean {
-  const from = normalizeHandle(fromHandle);
-  const to = normalizeHandle(toHandle);
-  return links.some(
-    (l) =>
-      normalizeHandle(l.fromHandle) === from &&
-      normalizeHandle(l.toHandle) === to &&
-      (kind ? l.kind === kind : true),
-  );
-}

@@ -105,6 +105,16 @@ html[data-theme="light"] {
   }
 }
 
+/* Privy modal — soft square logo (rounded corners, still square) */
+#privy-dialog img[src*="jtx-dao"],
+#privy-modal img[src*="jtx-dao"],
+div[id*="privy"] img[src*="jtx-dao"],
+div[class*="privy"] img[src*="jtx-dao"],
+img[src*="jtx-dao-rounded"] {
+  border-radius: 18% !important;
+  overflow: hidden;
+}
+
 @layer utilities {
   .font-display {
     font-family: var(--font-display);
@@ -182,5 +192,28 @@ html[data-theme="light"] {
   }
   .fill-augment {
     fill: var(--color-augment);
+  }
+}
+
+/* Particle Reveal fallback dust (when Chrome html-in-canvas is off) */
+@keyframes particle-reveal-drift {
+  0% {
+    filter: contrast(1.05) brightness(1);
+  }
+  50% {
+    filter: contrast(1.14) brightness(1.05);
+  }
+  100% {
+    filter: contrast(1.05) brightness(1);
+  }
+}
+
+.particle-reveal-dust {
+  animation: particle-reveal-drift 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle-reveal-dust {
+    animation: none;
   }
 }

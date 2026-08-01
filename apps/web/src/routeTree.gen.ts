@@ -12,11 +12,21 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AugmentsRouteImport } from './routes/augments'
 import { Route as ConsoleRouteImport } from './routes/console'
+import { Route as DojoRouteImport } from './routes/dojo'
 import { Route as ExhibitRouteImport } from './routes/exhibit'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MoaRouteImport } from './routes/moa'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as WarpRouteImport } from './routes/warp'
 import { Route as ApiAvatarRouteImport } from './routes/api/avatar'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiBlockworksSearchRouteImport } from './routes/api/blockworks/search'
+import { Route as ApiTinyfishEnrichRouteImport } from './routes/api/tinyfish/enrich'
+import { Route as ApiTinyfishSearchRouteImport } from './routes/api/tinyfish/search'
+import { Route as ApiXSocialGraphRouteImport } from './routes/api/x/social-graph'
 import { Route as ApiX402PayRouteImport } from './routes/api/x402/pay'
+import { Route as ApiSolanaRpcRouteImport } from './routes/api/solana-rpc'
+import { Route as ApiXProbeMoneyRouteImport } from './routes/api/x/probe-money'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -33,6 +43,11 @@ const ConsoleRoute = ConsoleRouteImport.update({
   path: '/console',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DojoRoute = DojoRouteImport.update({
+  id: '/dojo',
+  path: '/dojo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExhibitRoute = ExhibitRouteImport.update({
   id: '/exhibit',
   path: '/exhibit',
@@ -41,6 +56,21 @@ const ExhibitRoute = ExhibitRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MoaRoute = MoaRouteImport.update({
+  id: '/moa',
+  path: '/moa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WarpRoute = WarpRouteImport.update({
+  id: '/warp',
+  path: '/warp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAvatarRoute = ApiAvatarRouteImport.update({
@@ -53,9 +83,39 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBlockworksSearchRoute = ApiBlockworksSearchRouteImport.update({
+  id: '/api/blockworks/search',
+  path: '/api/blockworks/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTinyfishEnrichRoute = ApiTinyfishEnrichRouteImport.update({
+  id: '/api/tinyfish/enrich',
+  path: '/api/tinyfish/enrich',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTinyfishSearchRoute = ApiTinyfishSearchRouteImport.update({
+  id: '/api/tinyfish/search',
+  path: '/api/tinyfish/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiXSocialGraphRoute = ApiXSocialGraphRouteImport.update({
+  id: '/api/x/social-graph',
+  path: '/api/x/social-graph',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiX402PayRoute = ApiX402PayRouteImport.update({
   id: '/api/x402/pay',
   path: '/api/x402/pay',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSolanaRpcRoute = ApiSolanaRpcRouteImport.update({
+  id: '/api/solana-rpc',
+  path: '/api/solana-rpc',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiXProbeMoneyRoute = ApiXProbeMoneyRouteImport.update({
+  id: '/api/x/probe-money',
+  path: '/api/x/probe-money',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -63,32 +123,62 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/augments': typeof AugmentsRoute
   '/console': typeof ConsoleRoute
+  '/dojo': typeof DojoRoute
   '/exhibit': typeof ExhibitRoute
   '/login': typeof LoginRoute
+  '/moa': typeof MoaRoute
+  '/settings': typeof SettingsRoute
+  '/warp': typeof WarpRoute
   '/api/avatar': typeof ApiAvatarRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/blockworks/search': typeof ApiBlockworksSearchRoute
+  '/api/tinyfish/enrich': typeof ApiTinyfishEnrichRoute
+  '/api/tinyfish/search': typeof ApiTinyfishSearchRoute
+  '/api/x/social-graph': typeof ApiXSocialGraphRoute
   '/api/x402/pay': typeof ApiX402PayRoute
+  '/api/solana-rpc': typeof ApiSolanaRpcRoute
+  '/api/x/probe-money': typeof ApiXProbeMoneyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/augments': typeof AugmentsRoute
   '/console': typeof ConsoleRoute
+  '/dojo': typeof DojoRoute
   '/exhibit': typeof ExhibitRoute
   '/login': typeof LoginRoute
+  '/moa': typeof MoaRoute
+  '/settings': typeof SettingsRoute
+  '/warp': typeof WarpRoute
   '/api/avatar': typeof ApiAvatarRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/blockworks/search': typeof ApiBlockworksSearchRoute
+  '/api/tinyfish/enrich': typeof ApiTinyfishEnrichRoute
+  '/api/tinyfish/search': typeof ApiTinyfishSearchRoute
+  '/api/x/social-graph': typeof ApiXSocialGraphRoute
   '/api/x402/pay': typeof ApiX402PayRoute
+  '/api/solana-rpc': typeof ApiSolanaRpcRoute
+  '/api/x/probe-money': typeof ApiXProbeMoneyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/augments': typeof AugmentsRoute
   '/console': typeof ConsoleRoute
+  '/dojo': typeof DojoRoute
   '/exhibit': typeof ExhibitRoute
   '/login': typeof LoginRoute
+  '/moa': typeof MoaRoute
+  '/settings': typeof SettingsRoute
+  '/warp': typeof WarpRoute
   '/api/avatar': typeof ApiAvatarRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/blockworks/search': typeof ApiBlockworksSearchRoute
+  '/api/tinyfish/enrich': typeof ApiTinyfishEnrichRoute
+  '/api/tinyfish/search': typeof ApiTinyfishSearchRoute
+  '/api/x/social-graph': typeof ApiXSocialGraphRoute
   '/api/x402/pay': typeof ApiX402PayRoute
+  '/api/solana-rpc': typeof ApiSolanaRpcRoute
+  '/api/x/probe-money': typeof ApiXProbeMoneyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -96,42 +186,82 @@ export interface FileRouteTypes {
     | '/'
     | '/augments'
     | '/console'
+    | '/dojo'
     | '/exhibit'
     | '/login'
+    | '/moa'
+    | '/settings'
+    | '/warp'
     | '/api/avatar'
     | '/api/auth/$'
+    | '/api/blockworks/search'
+    | '/api/tinyfish/enrich'
+    | '/api/tinyfish/search'
+    | '/api/x/social-graph'
     | '/api/x402/pay'
+    | '/api/solana-rpc'
+    | '/api/x/probe-money'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/augments'
     | '/console'
+    | '/dojo'
     | '/exhibit'
     | '/login'
+    | '/moa'
+    | '/settings'
+    | '/warp'
     | '/api/avatar'
     | '/api/auth/$'
+    | '/api/blockworks/search'
+    | '/api/tinyfish/enrich'
+    | '/api/tinyfish/search'
+    | '/api/x/social-graph'
     | '/api/x402/pay'
+    | '/api/solana-rpc'
+    | '/api/x/probe-money'
   id:
     | '__root__'
     | '/'
     | '/augments'
     | '/console'
+    | '/dojo'
     | '/exhibit'
     | '/login'
+    | '/moa'
+    | '/settings'
+    | '/warp'
     | '/api/avatar'
     | '/api/auth/$'
+    | '/api/blockworks/search'
+    | '/api/tinyfish/enrich'
+    | '/api/tinyfish/search'
+    | '/api/x/social-graph'
     | '/api/x402/pay'
+    | '/api/solana-rpc'
+    | '/api/x/probe-money'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AugmentsRoute: typeof AugmentsRoute
   ConsoleRoute: typeof ConsoleRoute
+  DojoRoute: typeof DojoRoute
   ExhibitRoute: typeof ExhibitRoute
   LoginRoute: typeof LoginRoute
+  MoaRoute: typeof MoaRoute
+  SettingsRoute: typeof SettingsRoute
+  WarpRoute: typeof WarpRoute
   ApiAvatarRoute: typeof ApiAvatarRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBlockworksSearchRoute: typeof ApiBlockworksSearchRoute
+  ApiTinyfishEnrichRoute: typeof ApiTinyfishEnrichRoute
+  ApiTinyfishSearchRoute: typeof ApiTinyfishSearchRoute
+  ApiXSocialGraphRoute: typeof ApiXSocialGraphRoute
   ApiX402PayRoute: typeof ApiX402PayRoute
+  ApiSolanaRpcRoute: typeof ApiSolanaRpcRoute
+  ApiXProbeMoneyRoute: typeof ApiXProbeMoneyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -157,6 +287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dojo': {
+      id: '/dojo'
+      path: '/dojo'
+      fullPath: '/dojo'
+      preLoaderRoute: typeof DojoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/exhibit': {
       id: '/exhibit'
       path: '/exhibit'
@@ -169,6 +306,27 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/moa': {
+      id: '/moa'
+      path: '/moa'
+      fullPath: '/moa'
+      preLoaderRoute: typeof MoaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/warp': {
+      id: '/warp'
+      path: '/warp'
+      fullPath: '/warp'
+      preLoaderRoute: typeof WarpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/avatar': {
@@ -185,11 +343,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/blockworks/search': {
+      id: '/api/blockworks/search'
+      path: '/api/blockworks/search'
+      fullPath: '/api/blockworks/search'
+      preLoaderRoute: typeof ApiBlockworksSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tinyfish/enrich': {
+      id: '/api/tinyfish/enrich'
+      path: '/api/tinyfish/enrich'
+      fullPath: '/api/tinyfish/enrich'
+      preLoaderRoute: typeof ApiTinyfishEnrichRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tinyfish/search': {
+      id: '/api/tinyfish/search'
+      path: '/api/tinyfish/search'
+      fullPath: '/api/tinyfish/search'
+      preLoaderRoute: typeof ApiTinyfishSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/x/social-graph': {
+      id: '/api/x/social-graph'
+      path: '/api/x/social-graph'
+      fullPath: '/api/x/social-graph'
+      preLoaderRoute: typeof ApiXSocialGraphRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/x402/pay': {
       id: '/api/x402/pay'
       path: '/api/x402/pay'
       fullPath: '/api/x402/pay'
       preLoaderRoute: typeof ApiX402PayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/solana-rpc': {
+      id: '/api/solana-rpc'
+      path: '/api/solana-rpc'
+      fullPath: '/api/solana-rpc'
+      preLoaderRoute: typeof ApiSolanaRpcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/x/probe-money': {
+      id: '/api/x/probe-money'
+      path: '/api/x/probe-money'
+      fullPath: '/api/x/probe-money'
+      preLoaderRoute: typeof ApiXProbeMoneyRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -199,11 +399,21 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AugmentsRoute: AugmentsRoute,
   ConsoleRoute: ConsoleRoute,
+  DojoRoute: DojoRoute,
   ExhibitRoute: ExhibitRoute,
   LoginRoute: LoginRoute,
+  MoaRoute: MoaRoute,
+  SettingsRoute: SettingsRoute,
+  WarpRoute: WarpRoute,
   ApiAvatarRoute: ApiAvatarRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBlockworksSearchRoute: ApiBlockworksSearchRoute,
+  ApiTinyfishEnrichRoute: ApiTinyfishEnrichRoute,
+  ApiTinyfishSearchRoute: ApiTinyfishSearchRoute,
+  ApiXSocialGraphRoute: ApiXSocialGraphRoute,
   ApiX402PayRoute: ApiX402PayRoute,
+  ApiSolanaRpcRoute: ApiSolanaRpcRoute,
+  ApiXProbeMoneyRoute: ApiXProbeMoneyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

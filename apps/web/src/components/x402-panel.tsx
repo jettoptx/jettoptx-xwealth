@@ -23,14 +23,11 @@ import {
   buildPaymentRequired,
   encodePaymentRequired,
   encodePaymentSignature,
-  X402_ASSET,
   type X402SettleResult,
 } from "@/lib/x402";
 import { buildX402SignMessage } from "@/lib/privy-pay-sign";
 import { useWealthStore } from "@/lib/store";
 import { privyEnabled } from "@/lib/auth/privy";
-import { useCurrentUser } from "@/lib/auth/use-current-user";
-import { publishProofPublic } from "@/lib/notr-relay";
 import { cn } from "@/lib/utils";
 
 type PayMode = "dry" | "live";
@@ -41,7 +38,6 @@ export function X402Panel() {
   const setSolanaWallet = useWealthStore((s) => s.setSolanaWallet);
   const addReceipt = useWealthStore((s) => s.addReceipt);
   const receipts = useWealthStore((s) => s.receipts);
-  const user = useCurrentUser();
   const [amount, setAmount] = useState("0.10");
   const [mode, setMode] = useState<PayMode>("dry");
   const [liveConfirm, setLiveConfirm] = useState(false);
@@ -248,40 +244,25 @@ export function X402Panel() {
         harness: isLive ? "live" : "manual",
       });
 
-      // Map of Augments — public edge, amount truncated (privacy default)
-      const payerHandle =
-        user?.handle ||
-        (fromWallet.startsWith("agent") ? "agent" : fromWallet.slice(0, 8));
-      try {
-        const proof = await publishProofPublic({
-          payerHandle,
-          payeeHandle: data.xHandle,
-          asset: X402_ASSET,
-          settledAt: data.settledAt,
-          txOrIntentId: data.transaction,
-          amountPublic: null,
-          harness: isLive ? "live" : "manual",
-        });
-        push(`◎ MoA proof ${proof.id} (amount private)`);
-        toast.success(
-          "Link created on Map of Augments — Space Cowboy proof recorded.",
-          {
-            action: {
-              label: "Open map",
-              onClick: () => {
-                window.location.href = `/augments?view=map&highlight=${proof.id}`;
-              },
-            },
-          },
+      if (data.rpc) {
+        push(
+          `↗ RPC ${data.rpc.provider}${
+            data.rpc.slot != null ? ` · slot ${data.rpc.slot}` : ""
+          }${data.rpc.onChain ? " · on-chain" : ""}`,
         );
-      } catch {
-        /* non-blocking */
+        if (data.rpc.chainSignature) {
+          push(`✓ chain sig ${data.rpc.chainSignature.slice(0, 16)}…`);
+        }
       }
 
       // 4) REAL → open X Money "Pay now" window
       if (isLive) {
         const payUrl = data.actionUrl || money.transferUrl;
-        push(`✓ Privy signed · opening Pay now…`);
+        push(
+          data.rpc?.onChain
+            ? `✓ Broadcast via Helius · opening Pay now…`
+            : `✓ Privy signed · Helius rail ready · opening Pay now…`,
+        );
         push(`→ ${payUrl}`);
         const win = window.open(payUrl, "_blank", "noopener,noreferrer");
         if (!win) {

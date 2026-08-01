@@ -233,13 +233,13 @@ export function Web4ToolsConstellation({
             opacity="0.98"
           />
           <image
-            href="/brand/tools/astroknots-algo.png"
+            href="/brand/xwealth-logo.png"
             x={CENTER.cx - 40}
             y={CENTER.cy - 40}
             width="80"
             height="80"
             clipPath="url(#clip-astroknots-hub)"
-            preserveAspectRatio="xMidYMid slice"
+            preserveAspectRatio="xMidYMid meet"
           />
           <text
             x={CENTER.cx}

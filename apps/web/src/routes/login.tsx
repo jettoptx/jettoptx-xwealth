@@ -1,34 +1,98 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, Navigate, createFileRoute } from "@tanstack/react-router";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
-import { ChevronDown, Mail, Wallet } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { GROK_PROVIDERS, authEnabled, signIn } from "@/lib/auth/client";
-import { privyEnabled } from "@/lib/auth/privy";
+import {
+  PRIVY_LOGIN_OTHER,
+  type PrivyOtherMethod,
+  privyEnabled,
+} from "@/lib/auth/privy";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
+  AppleLogo,
+  AuthMethodIcon,
+  GitHubLogo,
   GoogleLogo,
   JtxMark,
-  PrivyMark,
+  MailLogo,
+  PhoneLogo,
+  UsdcSolanaRail,
+  WalletLogo,
   XLogo,
 } from "@/components/brand-icons";
+import { SIGN_WITH_OPTX } from "@/lib/brand";
+import { postLoginHref } from "@/lib/optx-links";
+
+/** Single-line labels only — no "Jett Optics · Google" spam under each method. */
+const OTHER_METHOD_META: Record<
+  PrivyOtherMethod,
+  { label: string; icon: ReactNode }
+> = {
+  google: {
+    label: "Continue with Google",
+    icon: (
+      <AuthMethodIcon>
+        <GoogleLogo className="size-4" />
+      </AuthMethodIcon>
+    ),
+  },
+  apple: {
+    label: "Continue with Apple",
+    icon: (
+      <AuthMethodIcon>
+        <AppleLogo className="size-4" />
+      </AuthMethodIcon>
+    ),
+  },
+  github: {
+    label: "Continue with GitHub",
+    icon: (
+      <AuthMethodIcon>
+        <GitHubLogo className="size-4" />
+      </AuthMethodIcon>
+    ),
+  },
+  wallet: {
+    label: "Continue with wallet",
+    icon: (
+      <AuthMethodIcon>
+        <WalletLogo className="size-4" />
+      </AuthMethodIcon>
+    ),
+  },
+  email: {
+    label: "Continue with email",
+    icon: (
+      <AuthMethodIcon>
+        <MailLogo className="size-4" />
+      </AuthMethodIcon>
+    ),
+  },
+  sms: {
+    label: "Continue with phone",
+    icon: (
+      <AuthMethodIcon>
+        <PhoneLogo className="size-4" />
+      </AuthMethodIcon>
+    ),
+  },
+};
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
+/**
+ * Login card matches apps/web OptxSignInModal:
+ * Sign with OPT𝕏 · Continue with [X logo] · Other options dropdown · Privy lockup
+ */
 function LoginPage() {
   const { user, isPending } = useCurrentUserState();
 
   if (!isPending && user) {
-    return <Navigate to="/console" />;
+    // Post-login home = console (xwealth.space)
+    return <Navigate to="/moa" />;
   }
 
   return (
@@ -43,69 +107,84 @@ function LoginPage() {
         </span>
       </div>
 
-      <Card className="bg-surface shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl">Link your X handle</CardTitle>
-          <CardDescription>
-            Sign in with X to bind this wealth console to your official handle.
-            Then paste your X Money pay link so agent harnesses can settle x402
-            into your account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      {/* OPTX card — same visual language as localhost Sign with OPTX modal */}
+      <div
+        className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a] px-6 py-7 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:px-8 sm:py-8"
+        role="dialog"
+        aria-labelledby="optx-login-title"
+      >
+        {/* Corner marks */}
+        <div className="pointer-events-none absolute left-3 top-3 h-4 w-4 border-l border-t border-white/20" />
+        <div className="pointer-events-none absolute right-3 top-3 h-4 w-4 border-r border-t border-white/20" />
+        <div className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 border-b border-l border-white/20" />
+        <div className="pointer-events-none absolute bottom-3 right-3 h-4 w-4 border-b border-r border-white/20" />
+
+        <h1
+          id="optx-login-title"
+          className="text-[26px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[28px]"
+        >
+          {SIGN_WITH_OPTX}
+        </h1>
+        <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-white/40">
+          X Wealth · Privy
+        </p>
+        <p className="mt-4 text-[13px] leading-relaxed text-white/55">
+          Primary path is <strong className="text-white/85">X OAuth</strong> to
+          bind this wealth console to your official @handle. Then paste your X
+          Money pay link so agent harnesses can settle x402 into your account.
+        </p>
+
+        <div className="mt-4 flex justify-center sm:justify-start">
+          <UsdcSolanaRail />
+        </div>
+
+        <div className="mt-7">
           {privyEnabled ? (
             <PrivyLoginPanel />
           ) : authEnabled ? (
             <BetterAuthLoginPanel />
           ) : (
-            <p className="text-sm text-muted">
+            <p className="text-sm text-white/50">
               Sign-in is disabled in this environment.
             </p>
           )}
-          <div className="flex flex-col items-center gap-2 pt-3">
-            {privyEnabled && (
-              <div className="flex items-center gap-1.5 text-[11px] text-subtle">
-                <PrivyMark className="size-4 rounded-md" />
-                <span>Powered by Privy · OPTX identity</span>
-              </div>
-            )}
-            <p className="text-center text-xs text-subtle">
-              Jett Optical Encryption ·{" "}
-              <Link
-                to="/"
-                className="text-muted underline-offset-2 hover:underline"
-              >
-                Back
-              </Link>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="mt-6 flex flex-col items-center gap-3">
+          {privyEnabled && (
+            <img
+              src="/brand/privy-protected-lockup-white.svg"
+              alt="Protected by Privy"
+              className="h-3.5 w-auto max-w-[min(100%,220px)] opacity-90 sm:h-4"
+              draggable={false}
+            />
+          )}
+          <p className="text-center text-[11px] text-white/35">
+            Jett Optical Encryption ·{" "}
+            <Link
+              to="/"
+              className="text-white/50 underline-offset-2 hover:text-white/70 hover:underline"
+            >
+              Back
+            </Link>
+          </p>
+        </div>
+      </div>
     </main>
   );
 }
 
 function PrivyLoginPanel() {
-  const { ready, authenticated } = usePrivy();
+  const { ready } = usePrivy();
   const { login } = useLogin({
     onComplete: () => {
-      // Soft navigate — hard reload during wallet create was part of the loop
-      if (typeof window !== "undefined") {
-        window.location.assign("/console");
-      }
+      window.location.href = postLoginHref();
     },
   });
   const [showOther, setShowOther] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
-  // Already authenticated → leave login (no wallet wait)
-  if (authenticated) {
-    return <Navigate to="/console" />;
-  }
-
-  async function start(
-    method: "twitter" | "email" | "wallet" | "google" | "apple",
-  ) {
+  async function start(method: "twitter" | PrivyOtherMethod) {
     if (!ready) return;
     setBusy(method);
     try {
@@ -116,78 +195,71 @@ function PrivyLoginPanel() {
   }
 
   return (
-    <div className="space-y-3">
-      <Button
-        type="button"
-        size="lg"
-        variant="default"
-        className="w-full gap-2 text-base"
-        disabled={!ready || busy === "twitter"}
-        onClick={() => void start("twitter")}
-      >
-        <XLogo className="size-4" />
-        Continue with X
-      </Button>
-
+    <div className="space-y-0">
+      {/* Primary — Continue with + X logo only */}
       <button
         type="button"
-        onClick={() => setShowOther((v) => !v)}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-muted transition-colors hover:bg-elevated hover:text-fg"
+        disabled={!ready || busy === "twitter"}
+        onClick={() => void start("twitter")}
+        className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-3.5 text-[14px] font-semibold text-black transition hover:bg-white/95 disabled:opacity-40"
       >
-        Other options
-        <ChevronDown
-          className={`size-3.5 transition-transform ${showOther ? "rotate-180" : ""}`}
-        />
+        {!ready || busy === "twitter" ? (
+          <span>Loading…</span>
+        ) : (
+          <>
+            <span>Continue with</span>
+            <XLogo className="size-4 shrink-0 text-black" />
+          </>
+        )}
       </button>
 
-      {showOther && (
-        <div className="space-y-2 rounded-xl border border-border bg-bg/60 p-2">
-          <Button
-            type="button"
-            size="lg"
-            variant="secondary"
-            className="w-full gap-2"
-            disabled={!ready}
-            onClick={() => void start("email")}
-          >
-            <Mail className="size-4" />
-            Email
-          </Button>
-          <Button
-            type="button"
-            size="lg"
-            variant="secondary"
-            className="w-full gap-2"
-            disabled={!ready}
-            onClick={() => void start("wallet")}
-          >
-            <Wallet className="size-4" />
-            Wallet
-          </Button>
-          <Button
-            type="button"
-            size="lg"
-            variant="secondary"
-            className="w-full gap-2"
-            disabled={!ready}
-            onClick={() => void start("google")}
-          >
-            <GoogleLogo className="size-4" />
-            Google
-          </Button>
-          <Button
-            type="button"
-            size="lg"
-            variant="secondary"
-            className="w-full gap-2"
-            disabled={!ready}
-            onClick={() => void start("apple")}
-          >
-            <AppleGlyph className="size-4" />
-            Apple
-          </Button>
-        </div>
-      )}
+      {/* OR */}
+      <div className="my-5 flex items-center gap-3">
+        <div className="h-px flex-1 bg-white/10" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/35">
+          or
+        </span>
+        <div className="h-px flex-1 bg-white/10" />
+      </div>
+
+      {/* Other Privy methods — Google → Apple → GitHub → Wallet → Email → Phone */}
+      <div className="overflow-hidden rounded-xl border border-white/12 bg-white/[0.03]">
+        <button
+          type="button"
+          onClick={() => setShowOther((v) => !v)}
+          aria-expanded={showOther}
+          className="flex w-full items-center justify-between gap-2 px-4 py-3.5 text-left transition hover:bg-white/[0.04]"
+        >
+          <span className="block text-[13px] font-medium text-white/85">
+            Other options
+          </span>
+          <ChevronDown
+            className={`size-4 text-white/40 transition-transform ${showOther ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {showOther && (
+          <div className="space-y-2 border-t border-white/10 px-3 py-3">
+            {PRIVY_LOGIN_OTHER.map((id) => {
+              const m = OTHER_METHOD_META[id];
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={!ready || busy === id}
+                  onClick={() => void start(id)}
+                  className="flex w-full items-center gap-3 rounded-lg border border-white/10 bg-[#141414] px-3 py-2.5 text-left transition hover:border-white/20 hover:bg-[#1a1a1a] disabled:opacity-40"
+                >
+                  {m.icon}
+                  <span className="min-w-0 flex-1 text-[13px] font-medium text-white/90">
+                    {m.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -198,42 +270,36 @@ function BetterAuthLoginPanel() {
   );
 
   return (
-    <>
+    <div className="space-y-2">
       {providers.map((p) => {
         const isX = p.idp === "twitter";
         return (
-          <Button
+          <button
             key={p.providerId}
             type="button"
-            size="lg"
-            variant={isX ? "default" : "secondary"}
-            className="w-full gap-2"
+            className={
+              isX
+                ? "flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-3.5 text-[14px] font-semibold text-black"
+                : "flex w-full items-center justify-center gap-2 rounded-xl border border-white/12 bg-[#141414] py-3 text-[13px] font-medium text-white/90"
+            }
             onClick={() =>
-              void signIn(p.providerId, { callbackURL: "/console" })
+              void signIn(p.providerId, { callbackURL: "/moa" })
             }
           >
             {isX ? (
-              <XLogo className="size-4" />
+              <>
+                <span>Continue with</span>
+                <XLogo className="size-4 text-black" />
+              </>
             ) : (
-              <GoogleLogo className="size-4" />
+              <>
+                <GoogleLogo className="size-4" />
+                Continue with {p.label}
+              </>
             )}
-            Continue with {isX ? "X" : p.label}
-          </Button>
+          </button>
         );
       })}
-    </>
-  );
-}
-
-function AppleGlyph({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      aria-hidden
-      fill="currentColor"
-    >
-      <path d="M16.365 1.43c0 1.14-.42 2.2-1.2 3.03-.9.97-2.4 1.72-3.68 1.62-.16-1.1.4-2.26 1.17-3.08.9-.96 2.45-1.66 3.71-1.57zM20.5 17.2c-.58 1.34-.86 1.93-1.61 3.11-1.04 1.64-2.51 3.68-4.33 3.7-1.62.02-2.04-1.06-4.24-1.05-2.2.01-2.67 1.07-4.29 1.05-1.82-.02-3.21-1.86-4.25-3.5C.35 17.95-.7 13.2 1.18 10.02c1.17-1.98 3.02-3.23 4.76-3.23 1.77 0 2.88 1.08 4.34 1.08 1.41 0 2.27-1.09 4.35-1.09 1.55 0 3.19.84 4.36 2.3-3.83 2.1-3.21 7.57.51 8.12z" />
-    </svg>
+    </div>
   );
 }

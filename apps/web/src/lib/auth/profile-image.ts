@@ -1,7 +1,22 @@
 /**
  * Normalize OAuth / broker profile payloads into a usable avatar URL.
  * Handles X (`profile_image_url`), Google (`picture`), and common aliases.
+ *
+ * Non-X users (no remote profile photo) use the JOE default mark.
  */
+
+/** Local fallback for any user without an X (or other remote) profile photo. */
+export const DEFAULT_AVATAR_URL = "/brand/default-avatar.jpg";
+
+/** Prefer remote URL; otherwise the JOE default avatar. */
+export function resolveAvatarUrl(
+  remoteUrl: string | null | undefined,
+): string {
+  if (typeof remoteUrl === "string" && remoteUrl.trim()) {
+    return remoteUrl.trim();
+  }
+  return DEFAULT_AVATAR_URL;
+}
 
 const IMAGE_KEYS = [
   "picture",

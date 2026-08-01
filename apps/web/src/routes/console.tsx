@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Cpu, ExternalLink } from "lucide-react";
 import { RedirectToSignIn } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { PayLinkPanel } from "@/components/pay-link-panel";
@@ -7,8 +8,17 @@ import { X402Panel } from "@/components/x402-panel";
 import { OnrampPanel } from "@/components/onramp-panel";
 import { MoneySetupBanner } from "@/components/money-setup-banner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useWealthStore } from "@/lib/store";
 import { moneyStatusLabel } from "@/lib/xmoney";
+import { OPTX_LINKS } from "@/lib/optx-links";
 
 export const Route = createFileRoute("/console")({
   component: ConsolePage,
@@ -85,6 +95,54 @@ function ConsolePage() {
         <X402Panel />
         <div className="lg:col-span-2">
           <OnrampPanel />
+        </div>
+        <div className="lg:col-span-2">
+          <Card className="border-augment/30 bg-surface">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Cpu className="size-4 text-augment" />
+                Agent plugin (post-login option)
+              </CardTitle>
+              <CardDescription className="text-xs leading-relaxed">
+                The outer product is this site. The{" "}
+                <strong className="text-fg/90">jettoptx-xwealth</strong> agent
+                plugin (JTX ≥1 gate, dry-run CLI, Grok/Hermes skills) lives in a
+                separate repo and runs without Privy — install it for harnesses.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <a
+                  href={OPTX_LINKS.plugin}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5"
+                >
+                  Open plugin repo
+                  <ExternalLink className="size-3.5" />
+                </a>
+              </Button>
+              <Button asChild size="sm" variant="secondary">
+                <a
+                  href={OPTX_LINKS.pluginInstall}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Install / gate
+                </a>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <a href={OPTX_LINKS.pluginGrok} target="_blank" rel="noreferrer">
+                  Grok plugin docs
+                </a>
+              </Button>
+              <Button asChild size="sm" variant="ghost">
+                <Link to="/augments" search={{ embed: undefined }}>
+                  Back to Augments map
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </main>

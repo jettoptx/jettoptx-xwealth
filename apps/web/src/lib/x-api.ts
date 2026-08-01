@@ -98,8 +98,15 @@ async function xFetchUserList(
 
 /**
  * Best-effort: does this handle expose an X Money pay surface?
- * Public HTML is login-walled; we treat a fast non-404 / non-hard-error as possible yes,
- * and soft-fail to null (unknown) rather than false negatives.
+ *
+ * There is **no official X API field** for Money enrollment.
+ * We cannot rely on "X AI" / Grok tools for batch truth either.
+ *
+ * Strategy:
+ * 1) HTML fetch of /i/money/pay/{handle} (often login-walled → null)
+ * 2) Prefer TinyFish Fetch via /api/x/probe-money for real page content
+ *
+ * Soft-fail to null (unknown) rather than false negatives when blocked.
  */
 export async function probeXMoney(
   handle: string,
@@ -131,12 +138,27 @@ export async function probeXMoney(
     if (money.status === 404) return false;
     if (money.status >= 200 && money.status < 400) {
       const text = (await money.text()).slice(0, 80_000);
+      // Strong negative signals first
+      if (
+        /money isn.?t available|not eligible|can.?t send money|isn.?t set up|not available in your region/i.test(
+          text,
+        )
+      ) {
+        return false;
+      }
+      // Login wall / empty shell → unknown
+      if (
+        /log in to x|sign in to x|Log in to X|Something went wrong/i.test(text) &&
+        text.length < 4000
+      ) {
+        return null;
+      }
       // Heuristics when page is partially public
-      if (/money\/pay|transfer-pay|amount-input|X Money|i\/money/i.test(text)) {
-        // "not available" / disabled copy → false
-        if (/money isn.?t available|not eligible|can.?t send money/i.test(text)) {
-          return false;
-        }
+      if (
+        /amount-input|send money|transfer-pay|Pay @|X Money|i\/money\/pay/i.test(
+          text,
+        )
+      ) {
         return true;
       }
       return null;

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Outlet,
   createRootRoute,
@@ -37,10 +37,10 @@ export const Route = createRootRoute({
           "Agentic X Money pay surface — x402 · USDC · Solana · plugin-and-play harnesses.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "/og-astroknots.jpg" },
+      { property: "og:image", content: "/brand/xwealth-logo.png" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:creator", content: "@jettoptx" },
-      { name: "twitter:image", content: "/og-astroknots.jpg" },
+      { name: "twitter:image", content: "/brand/xwealth-logo.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -54,15 +54,12 @@ export const Route = createRootRoute({
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@500;600;700;800&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      // Official X Wealth mark (OPTX Media/xwealth)
       { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "48x48" },
-      {
-        rel: "icon",
-        href: "/brand/astroknots-icon.png",
-        type: "image/png",
-        sizes: "256x256",
-      },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", href: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { rel: "icon", href: "/favicon-16.png", type: "image/png", sizes: "16x16" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+      { rel: "icon", href: "/brand/xwealth-logo.png", type: "image/png" },
     ],
     scripts: [
       {
@@ -79,17 +76,40 @@ function RootComponent() {
       <ThemeProvider>
         <AuthProvider>
           <AsciiGridBackground />
-          <div className="relative z-10 flex min-h-dvh flex-col pb-16 sm:pb-0">
-            <SiteHeader />
-            <div className="flex-1">
-              <Outlet />
-            </div>
-            <MobileNav />
-          </div>
+          <RootChrome>
+            <Outlet />
+          </RootChrome>
           <ThemedToaster />
         </AuthProvider>
       </ThemeProvider>
     </RootDocument>
+  );
+}
+
+function RootChrome({ children }: { children: ReactNode }) {
+  const [embed, setEmbed] = useState(false);
+  useEffect(() => {
+    try {
+      setEmbed(new URLSearchParams(window.location.search).get("embed") === "1");
+    } catch {
+      setEmbed(false);
+    }
+  }, []);
+
+  if (embed) {
+    return (
+      <div className="relative z-10 flex h-dvh min-h-0 flex-col overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative z-10 flex min-h-dvh flex-col pb-16 sm:pb-0">
+      <SiteHeader />
+      <div className="flex-1">{children}</div>
+      <MobileNav />
+    </div>
   );
 }
 

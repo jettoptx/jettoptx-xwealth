@@ -150,7 +150,138 @@ export type Web4ToolId =
   | "x-money"
   | "grok";
 
-export type DiscoverLane = "agents" | "crypto" | "defi";
+/** Primary Discover tabs on /augments */
+export type DiscoverLane = "agents" | "defi" | "x";
+
+/**
+ * Specific API plugins shown in Web4 Discover (not just lane tabs).
+ * Grok/SpaceXAI · Aeon · Chat · TinyFish · Blockworks · QuickNode · X Graph
+ */
+export type Web4ApiPlugin = {
+  id: string;
+  name: string;
+  brand: string;
+  blurb: string;
+  href: string;
+  docs?: string;
+  mcp?: string;
+  /** Brand mark under /public */
+  logo?: string;
+  /** Which Discover lane this plugin powers when selected */
+  lane?: DiscoverLane;
+  /**
+   * Always show on Agents strip even when Discover lane is agents.
+   * (DeFi rails still switch Discover to defi on Run.)
+   */
+  pinAgents?: boolean;
+  /** Optional preset query when Discover runs with this plugin */
+  query?: string;
+  accent: string;
+};
+
+export const WEB4_API_PLUGINS: Web4ApiPlugin[] = [
+  {
+    id: "grok-spacexai",
+    name: "Grok",
+    brand: "SpaceXAI · xAI",
+    blurb: "Rank, summarize, agent page payloads · console.x.ai",
+    href: "https://console.x.ai",
+    docs: "https://docs.x.ai",
+    logo: "/brand/tools/spacexai.png",
+    lane: "agents",
+    query: "xAI Grok agent payments X Money tooling",
+    accent: "#a78bfa",
+  },
+  {
+    id: "aeon",
+    name: "Aeon",
+    brand: "JOE · scheduled agents",
+    blurb: "Claude Code in GH Actions · mesh checks · morning brief",
+    href: "https://www.aeon.fun/",
+    docs: "https://github.com/aaronjmars/aeon",
+    logo: "/brand/tools/aeon.jpg",
+    lane: "agents",
+    query: "Aeon autonomous agent GitHub Actions ops",
+    accent: "#fbbf24",
+  },
+  {
+    id: "chat-api-xchat",
+    name: "Chat API",
+    brand: "xChat · JettChat",
+    blurb: "X Chat / JettChat dual-mode auth + messaging API",
+    href: "https://github.com/jettoptx/jettoptx-jettauth",
+    docs: "https://github.com/jettoptx/jettoptx-jettchat-app",
+    logo: "/astroknotsLOGO.png",
+    lane: "agents",
+    query: "X Chat API JettChat agent messaging OAuth",
+    accent: "#22d3ee",
+  },
+  {
+    id: "tinyfish",
+    name: "TinyFish",
+    brand: "Search · Fetch · MCP",
+    blurb: "Open-web agent discovery + profile enrich",
+    href: "https://docs.tinyfish.ai/mcp-integration",
+    mcp: TINYFISH_MCP_URL,
+    logo: "/brand/tools/tinyfish.png",
+    lane: "agents",
+    query: "X Money pay agents USDC Solana creator payments",
+    accent: "#2dd4bf",
+  },
+  {
+    id: "blockworks",
+    name: "Blockworks",
+    brand: "Messari · crypto/DeFi",
+    blurb: "Token + protocol ranker · API + MCP",
+    href: BLOCKWORKS_PRODUCT,
+    mcp: BLOCKWORKS_MCP_URL,
+    docs: "https://docs.messari.io/",
+    logo: "/brand/tools/blockworks.png",
+    /** DeFi discover lane; always pinned on Agents plugin strip */
+    lane: "defi",
+    pinAgents: true,
+    query: "solana",
+    accent: "#c084fc",
+  },
+  {
+    id: "quicknode",
+    name: "QuickNode",
+    brand: "Solana · RPC",
+    blurb: "RPC / streams · USDC settle rails · multi-chain endpoints",
+    href: "https://www.quicknode.com/",
+    docs: "https://www.quicknode.com/docs/solana",
+    logo: "/brand/tools/quicknode.svg",
+    lane: "defi",
+    pinAgents: true,
+    query: "Solana RPC QuickNode USDC agent payments",
+    accent: "#60a5fa",
+  },
+  {
+    id: "x-graph",
+    name: "X Graph",
+    brand: "X API · follows",
+    blurb: "Followers / following · logos · Money probe",
+    href: "https://docs.x.com/x-api/introduction",
+    docs: "https://console.x.com",
+    logo: "/favicon.svg",
+    lane: "x",
+    pinAgents: true,
+    query: "X Money pay link agent identity",
+    accent: "#e4e4e7",
+  },
+  {
+    id: "xwealth-plugin",
+    name: "X Wealth plugin",
+    brand: "jettoptx-xwealth",
+    blurb: "JTX gate · dry-run CLI · harness skills (post-login)",
+    href: "https://github.com/jettoptx/jettoptx-xwealth",
+    docs: "https://github.com/jettoptx/jettoptx-xwealth/blob/main/GROK-PLUGIN.md",
+    logo: "/brand/jtx-logo-dark.png",
+    lane: "agents",
+    query: "X Wealth agent plugin JTX x402 dry-run",
+    accent: "#e8a87c",
+  },
+];
 
 export const WEB4_TOOL_PIPELINE: Array<{
   id: Web4ToolId;
@@ -192,6 +323,6 @@ export const WEB4_TOOL_PIPELINE: Array<{
     id: "grok",
     step: 6,
     title: "Page",
-    role: "Grok rank + x402 agent payloads",
+    role: "Grok · SpaceXAI · Chat API payloads",
   },
 ];

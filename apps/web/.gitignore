@@ -10,3 +10,5 @@ screenshots
 artifacts
 .grok
 attachments
+.vercel
+.env*.local

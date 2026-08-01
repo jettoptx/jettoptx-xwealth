@@ -15,11 +15,19 @@ export const privyEnabled =
 
 export const PRIVY_LOGIN_PRIMARY = "twitter" as const;
 
+/** Other options order: Google → Apple → GitHub → Wallet → Email → Phone (sms) */
 export const PRIVY_LOGIN_OTHER = [
-  "email",
-  "wallet",
   "google",
   "apple",
+  "github",
+  "wallet",
+  "email",
+  "sms",
 ] as const;
 
 export type PrivyOtherMethod = (typeof PRIVY_LOGIN_OTHER)[number];
+
+export const PRIVY_LOGIN_ALL = [
+  PRIVY_LOGIN_PRIMARY,
+  ...PRIVY_LOGIN_OTHER,
+] as const;

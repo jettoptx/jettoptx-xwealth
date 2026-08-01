@@ -58,7 +58,9 @@ export function useSocialGraph(accessToken: string | null): SocialGraphState {
 
       setLoading(true);
       setError(null);
-      const probeMoney = opts?.probeMoney ?? true;
+      // Default false: HTML Money probe is login-walled (always "Money ?").
+      // Use Directory → "Probe Money" (TinyFish) for real yes/no on the page.
+      const probeMoney = opts?.probeMoney ?? false;
 
       try {
         const res = await fetch("/api/x/social-graph", {
@@ -97,7 +99,8 @@ export function useSocialGraph(accessToken: string | null): SocialGraphState {
   useEffect(() => {
     if (accessToken === lastToken.current) return;
     lastToken.current = accessToken;
-    void refresh({ probeMoney: true });
+    // Load graph fast; Money status filled by TinyFish probe on demand
+    void refresh({ probeMoney: false });
     return () => {
       abortRef.current?.abort();
     };
