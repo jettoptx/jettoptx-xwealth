@@ -1,2 +1,5 @@
 # MCP SDK (Hermes venv already has mcp; pin loosely for standalone use)
-mcp>=1.0.0
+# Pin to the 1.x line: server.py imports `mcp.server.fastmcp.FastMCP`, which the
+# 2.x SDK removed/relocated. Without the upper bound, pip resolves to 2.x and the
+# paper server + smoke test fail to import FastMCP.
+mcp>=1.0.0,<2
