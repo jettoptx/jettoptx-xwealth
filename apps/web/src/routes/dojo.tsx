@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, BookOpen, Orbit } from "lucide-react";
+import { ArrowLeft, BookOpen, Orbit, Settings2 } from "lucide-react";
 import { OPTX_LINKS } from "@/lib/optx-links";
 import { Button } from "@/components/ui/button";
 
@@ -79,6 +79,15 @@ function DojoHubPage() {
             >
               <ArrowLeft className="size-3.5" />
               Augments
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link
+              to={OPTX_LINKS.settingsPath}
+              className="inline-flex items-center gap-1.5"
+            >
+              <Settings2 className="size-3.5" />
+              Settings
             </Link>
           </Button>
         </div>

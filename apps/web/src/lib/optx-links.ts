@@ -64,16 +64,5 @@ export const OPTX_LINKS = {
 
 /** Where signed-in users go after Privy / OAuth completes. */
 export function postLoginHref(): string {
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (
-      host === "xwealth.space" ||
-      host === "www.xwealth.space" ||
-      host === "localhost" ||
-      host === "127.0.0.1"
-    ) {
-      return "/dojo";
-    }
-  }
-  return "https://xwealth.space/dojo";
+  return "/dojo";
 }
