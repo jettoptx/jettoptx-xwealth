@@ -31,6 +31,7 @@ import { OPTX_MARK } from "@/lib/brand";
 import {
   WEB4_API_PLUGINS,
   WEB4_SEO,
+  WEB4_SLOGAN,
   type DiscoverLane,
   type Web4ApiPlugin,
 } from "@/lib/web4-seo";
@@ -503,7 +504,10 @@ export function Web4OperatingSurface({
               <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-300/70">
                 {WEB4_SEO.name}
               </p>
-              <h2 className="max-w-3xl font-display text-xl font-semibold tracking-tight sm:text-2xl">
+              <p className="font-display text-lg font-semibold tracking-tight text-accent sm:text-xl">
+                {WEB4_SLOGAN}
+              </p>
+              <h2 className="max-w-3xl font-display text-xl font-semibold tracking-tight text-fg sm:text-2xl">
                 Web4 search engine and tooling dashboard for on-chain
                 intelligence, agent orchestration, and encrypted spatial
                 workflows.
