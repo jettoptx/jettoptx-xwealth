@@ -44,7 +44,7 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      // Space Mono for code / mono UI only (body + display = self-hosted Neue Haas Unica)
+      // Space Mono for code / mono UI only (body + display = self-hosted D-DIN Expanded)
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       {
         rel: "preconnect",
@@ -55,10 +55,20 @@ export const Route = createRootRoute({
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap",
       },
-      // Official X Wealth mark (OPTX Media/xwealth)
-      // After adding licensed Unica woff2 under /public/fonts/, optional:
-      // { rel: "preload", href: "/fonts/NeueHaasUnica-Regular.woff2", as: "font", type: "font/woff2", crossOrigin: "anonymous" },
-      // { rel: "preload", href: "/fonts/NeueHaasUnica-Medium.woff2", as: "font", type: "font/woff2", crossOrigin: "anonymous" },
+      {
+        rel: "preload",
+        href: "/fonts/D-DINExp.woff2",
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        href: "/fonts/D-DINExp-Bold.woff2",
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
       { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "48x48" },
       { rel: "icon", href: "/favicon-32.png", type: "image/png", sizes: "32x32" },
       { rel: "icon", href: "/favicon-16.png", type: "image/png", sizes: "16x16" },

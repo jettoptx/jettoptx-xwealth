@@ -38,15 +38,14 @@ function corsHeaders(): Record<string, string> {
   };
 }
 
-function liveEnabled(request: Request): boolean {
-  const env =
-    typeof process !== "undefined" &&
-    (process.env.X402_LIVE_ENABLED === "true" ||
-      process.env.VITE_X402_LIVE_ENABLED === "true");
-  const header = request.headers.get("x-x402-mode")?.toLowerCase() === "live";
-  // Allow live when client explicitly requests it (operator REAL button).
-  // Env flag forces allow even without header.
-  return env || header;
+/**
+ * LIVE settle is server-env only. Client headers / body.mode / VITE_* must NOT
+ * enable mainnet spend — they may request live after the env gate passes.
+ */
+function liveEnabled(): boolean {
+  return (
+    typeof process !== "undefined" && process.env.X402_LIVE_ENABLED === "true"
+  );
 }
 
 async function handle(request: Request): Promise<Response> {
@@ -113,9 +112,8 @@ async function handle(request: Request): Promise<Response> {
     }
   }
 
-  const allowLive =
-    liveEnabled(request) || body.mode?.toLowerCase() === "live";
-  // Async: dry-run probes Helius; LIVE may broadcast via sendTransaction
+  const allowLive = liveEnabled();
+  // Client may send mode=live / X-X402-MODE — ignored unless X402_LIVE_ENABLED=true
   const result = await settlePayment(envelope, signature, { allowLive });
   if (!result.success) {
     return new Response(JSON.stringify(result), {

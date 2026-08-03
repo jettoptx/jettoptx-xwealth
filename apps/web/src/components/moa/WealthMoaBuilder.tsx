@@ -970,10 +970,10 @@ export function WealthMoaBuilder() {
         )
         ctx.globalAlpha = 1
 
-        // Modern labels below the node — Neue Haas Unica, soft shadow
+        // Modern labels below the node — D-DIN Expanded, soft shadow
         const fontSize = r > 28 ? 12 : r > 20 ? 11 : 10
         const label = n.label.length > 14 ? `${n.label.slice(0, 13)}…` : n.label
-        ctx.font = `600 ${fontSize}px "Neue Haas Unica", "Neue Haas Unica Fallback", "Segoe UI", system-ui, sans-serif`
+        ctx.font = `600 ${fontSize}px "D-DIN Expanded", "Segoe UI", system-ui, sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'top'
         const lx = Math.round(nx)
