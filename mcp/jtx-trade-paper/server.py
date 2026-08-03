@@ -9,8 +9,16 @@ Tools (all default paper/dry-run; LIVE refused):
   - jtx_paper_order
   - jtx_paper_pnl
   - jtx_x402_catalog
+  - jtx_uw_paper_terminal  (Unusual Whales composite board = paper terminal eyes)
+  - jtx_uw_market_tide / jtx_uw_flow_alerts / jtx_uw_darkpool_recent / jtx_uw_ticker_flow
+  - jtx_uw_news / jtx_uw_screener_options / jtx_uw_screener_stocks
 
-No secrets. No private keys. No chain sends.
+UW paper terminal:
+  Dashboard: https://unusualwhales.com/dashboard/api
+  REST: https://api.unusualwhales.com
+  Official MCP (full tool surface): @unusualwhales/mcp — see hermes.mcp.example.yaml
+
+UW key from env only (UW_API_KEY). No secrets in responses. No private keys. No chain sends.
 """
 
 from __future__ import annotations
@@ -25,6 +33,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 import paper_state as ps
+import uw_client as uw
 
 X402_URL = os.environ.get("JTX_X402_URL", "https://jtx.astroknots.space/x402")
 WEALTH_URL = "https://wealth.astroknots.space"
@@ -36,7 +45,11 @@ mcp = FastMCP(
     instructions=(
         "JTX Trade paper trainer MCP for OPTX Wealth-08. "
         "All tools are dry-run/paper by default. LIVE is refused. "
-        "No secrets. x402 catalog is a public GET proxy."
+        "Primary paper-terminal eyes: Unusual Whales REST via jtx_uw_paper_terminal "
+        "(dashboard https://unusualwhales.com/dashboard/api; REST api.unusualwhales.com). "
+        "For the full UW surface use Hermes mcp_servers.unusualwhales (@unusualwhales/mcp). "
+        "UW data is market-data signals only — never auto-trade. "
+        "x402 catalog is a public GET proxy."
     ),
 )
 
@@ -52,7 +65,7 @@ def jtx_health() -> str:
     payload = {
         "ok": True,
         "service": "jtx-trade-paper",
-        "version": "0.1.0",
+        "version": "0.3.0",
         "mode_default": "paper",
         "live_enabled": False,
         "jtx_live_env": env_live,
@@ -64,12 +77,31 @@ def jtx_health() -> str:
             "jtx_paper_order",
             "jtx_paper_pnl",
             "jtx_x402_catalog",
+            "jtx_uw_paper_terminal",
+            "jtx_uw_market_tide",
+            "jtx_uw_flow_alerts",
+            "jtx_uw_darkpool_recent",
+            "jtx_uw_ticker_flow",
+            "jtx_uw_news",
+            "jtx_uw_screener_options",
+            "jtx_uw_screener_stocks",
         ],
         "rails": {
             "x402_catalog": X402_URL,
             "wealth_ui": WEALTH_URL,
             "agents": AGENTS_URL,
             "jtx_trade": JTX_TRADE_URL,
+            "uw_dashboard": uw.DASHBOARD_URL,
+        },
+        "unusual_whales": {
+            "configured": uw.configured(),
+            "paper_terminal": "jtx_uw_paper_terminal",
+            "dashboard": uw.DASHBOARD_URL,
+            "mcp": "hermes mcp_servers.unusualwhales (@unusualwhales/mcp stdio)",
+            "rest": uw.BASE,
+            "docs": uw.DOCS_URL,
+            "mcp_docs": uw.MCP_DOCS_URL,
+            "skill": uw.SKILL_URL,
         },
         "private_repo": "jettoptx/jettoptx-jtx-trade (clone may 401; this stub lives in public xwealth)",
         "data_dir": str(ps.DATA_DIR),
@@ -160,7 +192,7 @@ def jtx_x402_catalog() -> str:
             url,
             headers={
                 "Accept": "application/json,text/plain,*/*",
-                "User-Agent": "jtx-trade-paper-mcp/0.1",
+                "User-Agent": "jtx-trade-paper-mcp/0.3",
             },
             method="GET",
         )
@@ -171,7 +203,6 @@ def jtx_x402_catalog() -> str:
             catalog = json.loads(body)
         except json.JSONDecodeError:
             catalog = {"raw": body[:8000]}
-        # Redact nothing critical — catalog is public — but never invent keys
         return _json(
             {
                 "ok": True,
@@ -192,7 +223,7 @@ def jtx_x402_catalog() -> str:
                 "message": str(e),
             }
         )
-    except Exception as e:  # noqa: BLE001 — surface network failures to agent
+    except Exception as e:  # noqa: BLE001
         return _json(
             {
                 "ok": False,
@@ -203,8 +234,102 @@ def jtx_x402_catalog() -> str:
         )
 
 
+@mcp.tool()
+def jtx_uw_paper_terminal(
+    ticker: str = "SPY",
+    flow_limit: int = 5,
+    darkpool_limit: int = 5,
+    news_limit: int = 5,
+    screener_limit: int = 5,
+) -> str:
+    """
+    Paper terminal board from Unusual Whales REST (signals only).
+
+    Pulls market tide, flow alerts, dark pool, ticker flow, net premium ticks,
+    options volume, news, and screeners into one board for paper decisions.
+    Keys/usage: https://unusualwhales.com/dashboard/api
+    Full UW tool surface: Hermes unusualwhales MCP (@unusualwhales/mcp).
+    Never auto-executes trades.
+
+    Args:
+        ticker: focus ticker (default SPY)
+        flow_limit: max flow rows per section
+        darkpool_limit: max darkpool prints
+        news_limit: max headlines
+        screener_limit: max screener rows
+    """
+    return _json(
+        uw.paper_terminal(
+            ticker=ticker,
+            flow_limit=flow_limit,
+            darkpool_limit=darkpool_limit,
+            news_limit=news_limit,
+            screener_limit=screener_limit,
+        )
+    )
+
+
+@mcp.tool()
+def jtx_uw_market_tide() -> str:
+    """Unusual Whales market tide (call/put premium net). Paper signal only — not LIVE."""
+    return _json(uw.market_tide())
+
+
+@mcp.tool()
+def jtx_uw_flow_alerts(limit: int = 20, ticker_symbol: str = "") -> str:
+    """
+    Unusual Whales options flow alerts.
+
+    Args:
+        limit: max alerts (default 20)
+        ticker_symbol: optional ticker filter e.g. SPY
+    """
+    return _json(uw.flow_alerts(limit=limit, ticker_symbol=ticker_symbol or None))
+
+
+@mcp.tool()
+def jtx_uw_darkpool_recent(limit: int = 20) -> str:
+    """Unusual Whales recent dark pool prints. Paper signal only."""
+    return _json(uw.darkpool_recent(limit=limit))
+
+
+@mcp.tool()
+def jtx_uw_ticker_flow(ticker: str) -> str:
+    """
+    Recent options flow for a ticker via Unusual Whales.
+
+    Args:
+        ticker: equity ticker e.g. NVDA
+    """
+    return _json(uw.ticker_flow(ticker))
+
+
+@mcp.tool()
+def jtx_uw_news(limit: int = 10) -> str:
+    """Unusual Whales news headlines. Paper signal only."""
+    return _json(uw.news_headlines(limit=limit))
+
+
+@mcp.tool()
+def jtx_uw_screener_options(limit: int = 10, min_premium: int = 0) -> str:
+    """
+    Unusual Whales options screener (hottest chains). Paper signal only.
+
+    Args:
+        limit: max contracts
+        min_premium: optional minimum premium filter (0 = omit)
+    """
+    mp = int(min_premium) if min_premium and int(min_premium) > 0 else None
+    return _json(uw.screener_option_contracts(limit=limit, min_premium=mp))
+
+
+@mcp.tool()
+def jtx_uw_screener_stocks(limit: int = 10) -> str:
+    """Unusual Whales stock screener. Paper signal only."""
+    return _json(uw.screener_stocks(limit=limit))
+
+
 def main() -> None:
-    # Ensure ledger exists on boot
     ps.ensure_state()
     mcp.run(transport="stdio")
 

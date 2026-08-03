@@ -1,16 +1,35 @@
 # Drop into Hermes config.yaml under mcp_servers (adjust paths for your machine).
 # Profile example: %LOCALAPPDATA%/hermes/profiles/astrojoe/config.yaml
 #
-# NO SECRETS. Paper only.
+# NO SECRETS in git. Keys live in profile .env (UW_API_KEY).
+# Dashboard / usage: https://unusualwhales.com/dashboard/api
+# Official MCP docs: https://unusualwhales.com/public-api/mcp
 
 mcp_servers:
+  # Paper trainer: local ledger + UW composite paper terminal (REST)
   jtx_trade_paper:
     command: "python"
     args:
       - "C:/Users/joshu/repos/jettoptx/jettoptx-xwealth/mcp/jtx-trade-paper/server.py"
-    # Optional: isolate ledger
+    # Optional: isolate ledger + pass UW key into paper MCP process
     # env:
     #   JTX_PAPER_DATA_DIR: "C:/Users/joshu/AppData/Local/hermes/profiles/astrojoe/data/jtx-paper"
+    #   UW_API_KEY: "${UW_API_KEY}"
     # Never set JTX_LIVE=1 unless a human explicitly enables LIVE and a real backend exists.
-    timeout: 60
+    timeout: 90
     connect_timeout: 30
+
+  # Official Unusual Whales MCP - full 27-tool surface (stdio).
+  # Prefer stdio: remote https://api.unusualwhales.com/api/mcp may be CF-blocked.
+  unusualwhales:
+    command: "C:/Program Files/nodejs/npx.cmd"
+    args:
+      - "-y"
+      - "@unusualwhales/mcp"
+    env:
+      UW_API_KEY: "${UW_API_KEY}"
+      UNUSUAL_WHALES_API_KEY: "${UW_API_KEY}"
+      UW_CLIENT_API_ID: "100001"
+    enabled: true
+    timeout: 120
+    connect_timeout: 90

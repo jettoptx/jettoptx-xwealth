@@ -10,6 +10,7 @@ import urllib.request
 from typing import Any
 
 import paper_state as ps
+import uw_client as uw
 
 X402_URL = os.environ.get("JTX_X402_URL", "https://jtx.astroknots.space/x402")
 WEALTH_URL = "https://wealth.astroknots.space"
@@ -24,7 +25,7 @@ def _print(data: Any) -> None:
 def jtx_health() -> dict:
     def code(url: str) -> int:
         try:
-            req = urllib.request.Request(url, method="GET", headers={"User-Agent": "jtx-paper-cli/0.1"})
+            req = urllib.request.Request(url, method="GET", headers={"User-Agent": "jtx-paper-cli/0.3"})
             with urllib.request.urlopen(req, timeout=15) as r:
                 return getattr(r, "status", 200)
         except urllib.error.HTTPError as e:
@@ -43,8 +44,18 @@ def jtx_health() -> dict:
             "x402": {"url": X402_URL, "http": x},
             "agents": {"url": AGENTS_URL, "http": a},
             "jtx_trade": JTX_TRADE_URL,
+            "uw_dashboard": uw.DASHBOARD_URL,
         },
         "data_dir": str(ps.DATA_DIR),
+        "unusual_whales": {
+            "configured": uw.configured(),
+            "paper_terminal": "jtx_uw_paper_terminal",
+            "dashboard": uw.DASHBOARD_URL,
+            "rest": uw.BASE,
+            "docs": uw.DOCS_URL,
+            "mcp_docs": uw.MCP_DOCS_URL,
+            "skill": uw.SKILL_URL,
+        },
     }
 
 
@@ -52,7 +63,7 @@ def jtx_x402_catalog() -> dict:
     try:
         req = urllib.request.Request(
             X402_URL,
-            headers={"Accept": "application/json", "User-Agent": "jtx-paper-cli/0.1"},
+            headers={"Accept": "application/json", "User-Agent": "jtx-paper-cli/0.3"},
         )
         with urllib.request.urlopen(req, timeout=20) as resp:
             body = resp.read().decode("utf-8", errors="replace")
@@ -67,7 +78,11 @@ def main(argv: list[str]) -> int:
     if len(argv) < 2 or argv[1] in ("-h", "--help"):
         print(
             "usage: cli.py <jtx_health|jtx_markets_snapshot|jtx_paper_balance|"
-            "jtx_paper_order|jtx_paper_pnl|jtx_x402_catalog> [json_args]"
+            "jtx_paper_order|jtx_paper_pnl|jtx_x402_catalog|"
+            "jtx_uw_paper_terminal|jtx_uw_market_tide|jtx_uw_flow_alerts|"
+            "jtx_uw_darkpool_recent|jtx_uw_ticker_flow|jtx_uw_news|"
+            "jtx_uw_screener_options|jtx_uw_screener_stocks>"
+            " [json_args]"
         )
         return 0
     tool = argv[1]
@@ -99,6 +114,41 @@ def main(argv: list[str]) -> int:
         _print({"ok": True, **ps.paper_pnl()})
     elif tool == "jtx_x402_catalog":
         _print(jtx_x402_catalog())
+    elif tool == "jtx_uw_paper_terminal":
+        _print(
+            uw.paper_terminal(
+                ticker=str(args.get("ticker") or "SPY"),
+                flow_limit=int(args.get("flow_limit") or 5),
+                darkpool_limit=int(args.get("darkpool_limit") or 5),
+                news_limit=int(args.get("news_limit") or 5),
+                screener_limit=int(args.get("screener_limit") or 5),
+            )
+        )
+    elif tool == "jtx_uw_market_tide":
+        _print(uw.market_tide())
+    elif tool == "jtx_uw_flow_alerts":
+        _print(
+            uw.flow_alerts(
+                limit=int(args.get("limit") or 20),
+                ticker_symbol=args.get("ticker_symbol") or args.get("ticker"),
+            )
+        )
+    elif tool == "jtx_uw_darkpool_recent":
+        _print(uw.darkpool_recent(limit=int(args.get("limit") or 20)))
+    elif tool == "jtx_uw_ticker_flow":
+        _print(uw.ticker_flow(str(args.get("ticker") or args.get("symbol") or "")))
+    elif tool == "jtx_uw_news":
+        _print(uw.news_headlines(limit=int(args.get("limit") or 10)))
+    elif tool == "jtx_uw_screener_options":
+        mp = args.get("min_premium")
+        _print(
+            uw.screener_option_contracts(
+                limit=int(args.get("limit") or 10),
+                min_premium=int(mp) if mp not in (None, "", 0, "0") else None,
+            )
+        )
+    elif tool == "jtx_uw_screener_stocks":
+        _print(uw.screener_stocks(limit=int(args.get("limit") or 10)))
     else:
         _print({"ok": False, "error": f"unknown tool {tool}"})
         return 1

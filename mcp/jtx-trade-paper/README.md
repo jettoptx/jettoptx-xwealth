@@ -4,6 +4,17 @@ Paper / dry-run MCP + CLI trainer for **JTX Trade** (Wealth-08).
 
 Lives in public `jettoptx-xwealth` because private `jettoptx/jettoptx-jtx-trade` may be unclonable (gh 401).
 
+## Paper terminal (Unusual Whales)
+
+| | |
+|--|--|
+| Keys / usage | https://unusualwhales.com/dashboard/api |
+| REST | `https://api.unusualwhales.com` |
+| Official MCP | `@unusualwhales/mcp` — https://unusualwhales.com/public-api/mcp |
+| Composite tool | **`jtx_uw_paper_terminal`** (signals only → then `jtx_paper_order`) |
+
+Env: `UW_API_KEY` (never commit). See `hermes.mcp.example.yaml` for both MCPs.
+
 ## Tools
 
 | Tool | Purpose |
@@ -14,6 +25,8 @@ Lives in public `jettoptx-xwealth` because private `jettoptx/jettoptx-jtx-trade`
 | `jtx_paper_order` | Simulated fill log only |
 | `jtx_paper_pnl` | Mark-to-market paper PnL |
 | `jtx_x402_catalog` | GET `https://jtx.astroknots.space/x402` |
+| `jtx_uw_paper_terminal` | **UW paper board** (tide/flow/darkpool/news/screeners) |
+| `jtx_uw_*` | Individual UW REST helpers |
 
 ## Safety
 
@@ -25,6 +38,7 @@ Lives in public `jettoptx-xwealth` because private `jettoptx/jettoptx-jtx-trade`
 
 ```bash
 python mcp/jtx-trade-paper/cli.py jtx_health
+python mcp/jtx-trade-paper/cli.py jtx_uw_paper_terminal '{"ticker":"SPY"}'
 python mcp/jtx-trade-paper/cli.py jtx_x402_catalog
 python mcp/jtx-trade-paper/cli.py jtx_markets_snapshot
 python mcp/jtx-trade-paper/cli.py jtx_paper_balance

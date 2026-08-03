@@ -25,11 +25,15 @@ When private clone works, promote or mirror this MCP into that repo and keep xwe
 ```
 Hermes / Grok / agent
         │ stdio MCP
-        ▼
-jtx-trade-paper (this package)
-        ├── paper ledger JSON (local)
-        ├── synthetic markets
-        └── GET jtx.astroknots.space/x402  (public catalog only)
+        ├──────────────────────────────┐
+        ▼                              ▼
+jtx-trade-paper (this package)    unusualwhales (@unusualwhales/mcp)
+        ├── paper ledger JSON           └── full UW tool surface (~27)
+        ├── synthetic crypto markets
+        ├── GET jtx.astroknots.space/x402
+        └── Unusual Whales REST paper terminal
+              jtx_uw_paper_terminal  ← dashboard.unusualwhales.com/dashboard/api keys
+              api.unusualwhales.com  ← signals only (never auto-LIVE)
         │
         ▼ (future)
 jettoptx-jtx-trade LIVE executor  ← gated: JTX_LIVE=1 AND live=true AND real backend
@@ -47,14 +51,18 @@ Downstream UX gate (no trading execution):
 
 | Tool | Behavior |
 |------|----------|
-| `jtx_health` | ok, version, rails URLs, LIVE policy |
+| `jtx_health` | ok, version, rails URLs, UW configured, LIVE policy |
 | `jtx_markets_snapshot` | synthetic SOL/JTX/USDC + MiroShark PM stub |
 | `jtx_paper_balance` | read ledger; `reset=true` restores defaults |
 | `jtx_paper_order` | simulated fill; updates balances; **no chain** |
 | `jtx_paper_pnl` | MTM vs starting paper book |
 | `jtx_x402_catalog` | proxy public GET `/x402` |
+| `jtx_uw_paper_terminal` | **UW composite paper board** (tide/flow/darkpool/news/screeners) |
+| `jtx_uw_*` | individual UW REST helpers |
 
 Default starting paper book: `10000 USDC`, `50 SOL`, `1000 JTX`.
+
+**UW rails:** dashboard https://unusualwhales.com/dashboard/api · REST `api.unusualwhales.com` · MCP `@unusualwhales/mcp`.
 
 ---
 
