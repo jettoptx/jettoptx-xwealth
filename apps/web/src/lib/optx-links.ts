@@ -52,6 +52,8 @@ export const OPTX_LINKS = {
   jettchatSettingsWallet: "https://www.jettoptx.chat/settings?tab=Wallet",
   home: "https://jettoptics.ai",
   jtx: "https://jtx.astroknots.space",
+  /** Buy ≥1 JTX — product SKU gate (wallet balance, not SaaS key) */
+  jtxBuy: "https://astroknots.space/buy",
   /** External trade venue (not owned by xwealth) */
   jtxVenue: "https://app.jtx.com",
   /** Post-login agent plugin (jettoptx/jettoptx-xwealth) */

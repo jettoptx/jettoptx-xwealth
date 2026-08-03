@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireJtxGate } from "@/lib/auth/jtx-require.server";
 import { sendRawTransactionBase64 } from "@/lib/helius-rpc";
 
 /**
@@ -26,7 +27,12 @@ export const Route = createFileRoute("/api/mojo/broadcast")({
         const body = (await request.json().catch(() => ({}))) as {
           signedTx?: string;
           signedTxBase64?: string;
+          wallet?: string;
+          solanaWallet?: string;
         };
+
+        const gate = await requireJtxGate(request, body, { mode: "proven" });
+        if (!gate.ok) return gate.response;
         const raw = (body.signedTx || body.signedTxBase64 || "").trim();
         if (!raw) {
           return Response.json(

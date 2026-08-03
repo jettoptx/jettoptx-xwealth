@@ -16,8 +16,8 @@
 | **High** | `VITE_TINYFISH_API_KEY` fallback could ship TinyFish key into client naming path | `lib/tinyfish.ts` | **Fixed:** server-only `TINYFISH_API_KEY`. |
 | **High** | No payTo allowlist on `/api/x402/pay` (arbitrary X Money URL / pubkey) | `routes/api/x402/pay.ts`, `lib/x402.ts` | **Documented residual.** Prefer catalog / X Money URL pattern allowlist next; Mojo Solana dest should match treasury/faucet set. Not auto-enabled LIVE. |
 | **High** | `PAYMENT-SIGNATURE` is base64 JSON, not crypto-verified wallet sig | `lib/x402.ts` `settlePayment` | **Documented residual.** Dry-run safe; LIVE must verify before broadcast. |
-| **Medium** | JTX gate is client/UI (+ CLI) — money APIs do not re-check ≥1 JTX | `lib/jtxGate.ts`, API routes | **Partial:** `/dojo` now UI-locks tools. Server JTX enforcement = follow-up. |
-| **Medium** | CORS `*` on `/api/x402/pay` and `/api/solana-rpc` | pay.ts, solana-rpc.ts | **Accepted for dry-run harnesses** (documented in JOE-SHIELD). Risk reduced by LIVE env gate + RPC allowlist. Tighten origins when LIVE ships. |
+| **Medium** | JTX gate is client/UI (+ CLI) — money APIs do not re-check ≥1 JTX | `lib/jtxGate.ts`, API routes | **Fixed (Hedgehog P0):** 2-tier `requireJtxGate` — **balance+rate-limit** for Discover APIs; **balance+ed25519 ownership** (`X-JTX-Proof`) for x402 settle + mojo. CORS allowlist (no `*` on gated denies). Buy URL `https://astroknots.space/buy`. Bypass: `JTX_GATE_DISABLED=true`. |
+| **Medium** | CORS `*` on `/api/x402/pay` and `/api/solana-rpc` | pay.ts, solana-rpc.ts | **Partial:** x402 + JTX deny responses use origin allowlist (`jtx-cors.ts`). `/api/solana-rpc` still permissive for browser JTX check — tighten with LIVE. |
 | **Medium** | `VITE_SOLANA_RPC_URL` can expose keyed RPC if mis-set | `.env.example`, `jtxGate.ts` | Docs warn: never put keys in `VITE_*`. Prefer `/api/solana-rpc`. |
 | **Low** | Hardcoded Privy app id fallback | `lib/auth/privy.ts` | Public client id; product gate remains JTX wallet, not Privy. |
 | **Info** | No EFvg wallet references in code | — | Catalog payTo = `5ct4…Cbyc` / `jtxfaucet.sol`; fee docs = Squads `9Wss…6YD7`. |
@@ -38,10 +38,11 @@
 
 ## Residual (do not “fix” by enabling LIVE)
 
-1. Server-side JTX check on settle/broadcast.  
-2. payTo allowlist (X Money host + Solana pubkey set).  
-3. Cryptographic verification of `PAYMENT-SIGNATURE`.  
-4. CORS origin allowlist when LIVE is productized.  
-5. Auth/rate-limit on TinyFish enrich / deep probe.
+1. ~~Server-side JTX check on settle/broadcast.~~ (`jtx-require.server.ts`)  
+2. ~~Ownership proof on settle/mojo + rate-limit on balance-only Discover.~~ (Hedgehog 2-tier)  
+3. payTo allowlist (X Money host + Solana pubkey set).  
+4. Cryptographic verification of `PAYMENT-SIGNATURE` (still envelope/base64 JSON for dry-run; LIVE must verify before broadcast).  
+5. CORS on `/api/solana-rpc` when LIVE is productized.  
+6. Session token after first ownership proof (reduce Phantom prompts).
 
 **Never** enable mainnet spend as a remediation. Operator LIVE = explicit `X402_LIVE_ENABLED=true` on the server only.

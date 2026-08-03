@@ -27,6 +27,13 @@ import {
 } from "lucide-react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { OPTX_LINKS } from "@/lib/optx-links";
+import { jtxDeniedMessage, jtxFetch, JTX_BUY_URL } from "@/lib/jtx-api";
+import {
+  checkJtxGate,
+  defaultWalletFromEnv,
+  type JtxGateResult,
+} from "@/lib/jtxGate";
+import { Web4OperatingSurface } from "@/components/augments/web4-operating-surface";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -202,6 +209,42 @@ function AugmentsPage() {
 
   const starred = useWealthStore((s) => s.starredAugments);
   const toggleStar = useWealthStore((s) => s.toggleStarAugment);
+  const walletStore = useWealthStore((s) => s.solanaWallet);
+  const setSolanaWallet = useWealthStore((s) => s.setSolanaWallet);
+
+  /** Default = Web4 ops dashboard; marketplace = legacy directory panels */
+  const [surface, setSurface] = useState<"ops" | "marketplace">("ops");
+  const [wallet, setWallet] = useState(
+    () => walletStore || defaultWalletFromEnv(),
+  );
+  const [gate, setGate] = useState<JtxGateResult | null>(null);
+  const [gateBusy, setGateBusy] = useState(false);
+  const [network, setNetwork] = useState("solana");
+
+  useEffect(() => {
+    if (walletStore && walletStore !== wallet) setWallet(walletStore);
+  }, [walletStore, wallet]);
+
+  const runGate = useCallback(async () => {
+    const w = wallet.trim();
+    if (w.length < 32) return;
+    setGateBusy(true);
+    try {
+      const result = await checkJtxGate(w);
+      setGate(result);
+      setSolanaWallet(w);
+      if (result.ok) toast.success(`JTX pass · ${result.uiAmount}`);
+      else
+        toast.error(result.error ?? "Need ≥1 JTX", {
+          action: {
+            label: "Buy JTX",
+            onClick: () => window.open(JTX_BUY_URL, "_blank"),
+          },
+        });
+    } finally {
+      setGateBusy(false);
+    }
+  }, [wallet, setSolanaWallet]);
 
   useEffect(() => {
     void fetch("/api/tinyfish/enrich")
@@ -284,9 +327,8 @@ function AugmentsPage() {
     }
     setProbingMoney(true);
     try {
-      const res = await fetch("/api/x/probe-money", {
+      const res = await jtxFetch("/api/x/probe-money", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ handles }),
       });
       const json = (await res.json()) as {
@@ -298,10 +340,19 @@ function AugmentsPage() {
           { hasXMoney: boolean | null; source: string }
         >;
         message?: string;
+        error?: string;
+        buyUrl?: string;
         keys?: string;
       };
       if (!res.ok || !json.results) {
-        toast.error(json.message || "Money probe failed");
+        toast.error(jtxDeniedMessage(json) || "Money probe failed", {
+          action: json.buyUrl
+            ? {
+                label: "Buy JTX",
+                onClick: () => window.open(json.buyUrl || JTX_BUY_URL, "_blank"),
+              }
+            : undefined,
+        });
         return;
       }
       setOverrides((prev) => {
@@ -334,15 +385,28 @@ function AugmentsPage() {
       setEnriching(true);
       setLastEnrich(null);
       try {
-        const res = await fetch("/api/tinyfish/enrich", {
+        const res = await jtxFetch("/api/tinyfish/enrich", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ handle, deep }),
         });
-        const json = (await res.json()) as EnrichPayload;
+        const json = (await res.json()) as EnrichPayload & { buyUrl?: string };
         setLastEnrich(json);
         if (!res.ok || !json.enrichment) {
-          toast.error(json.message || json.error || "TinyFish enrich failed");
+          toast.error(
+            jtxDeniedMessage(json) ||
+              json.message ||
+              json.error ||
+              "TinyFish enrich failed",
+            {
+              action: json.buyUrl
+                ? {
+                    label: "Buy JTX",
+                    onClick: () =>
+                      window.open(json.buyUrl || JTX_BUY_URL, "_blank"),
+                  }
+                : undefined,
+            },
+          );
           return;
         }
         const e = json.enrichment;
@@ -386,9 +450,8 @@ function AugmentsPage() {
       setDiscover(null);
       setCryptoHits(null);
       try {
-        const res = await fetch("/api/tinyfish/search", {
+        const res = await jtxFetch("/api/tinyfish/search", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             query: q,
             location: "US",
@@ -399,10 +462,21 @@ function AugmentsPage() {
               `X Wealth Web4 Agent SEO: discover agent-payable identities for ${q}`,
           }),
         });
-        const json = (await res.json()) as SearchPayload;
+        const json = (await res.json()) as SearchPayload & { buyUrl?: string };
         setDiscover(json);
         if (!res.ok) {
-          toast.error(json.message || json.error || "Discover failed");
+          toast.error(
+            jtxDeniedMessage(json) || json.message || json.error || "Discover failed",
+            {
+              action: json.buyUrl
+                ? {
+                    label: "Buy JTX",
+                    onClick: () =>
+                      window.open(json.buyUrl || JTX_BUY_URL, "_blank"),
+                  }
+                : undefined,
+            },
+          );
           return;
         }
         toast.success(
@@ -427,15 +501,30 @@ function AugmentsPage() {
       setCryptoHits(null);
       setDiscover(null);
       try {
-        const res = await fetch("/api/blockworks/search", {
+        const res = await jtxFetch("/api/blockworks/search", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: q, mode, limit: 12 }),
         });
-        const json = (await res.json()) as CryptoSearchPayload;
+        const json = (await res.json()) as CryptoSearchPayload & {
+          buyUrl?: string;
+        };
         setCryptoHits(json);
         if (!res.ok) {
-          toast.error(json.message || json.error || "Crypto search failed");
+          toast.error(
+            jtxDeniedMessage(json) ||
+              json.message ||
+              json.error ||
+              "Crypto search failed",
+            {
+              action: json.buyUrl
+                ? {
+                    label: "Buy JTX",
+                    onClick: () =>
+                      window.open(json.buyUrl || JTX_BUY_URL, "_blank"),
+                  }
+                : undefined,
+            },
+          );
           return;
         }
         toast.success(
@@ -485,6 +574,31 @@ function AugmentsPage() {
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("embed") === "1";
 
+  if (surface === "ops") {
+    return (
+      <Web4OperatingSurface
+        embed={embed}
+        wallet={wallet}
+        onWalletChange={(w) => {
+          setWallet(w);
+          setSolanaWallet(w);
+        }}
+        jtxOk={gate ? gate.ok : null}
+        jtxBusy={gateBusy}
+        onCheckJtx={() => void runGate()}
+        discoverQ={discoverQ}
+        onDiscoverQ={setDiscoverQ}
+        lane={lane}
+        onLane={setLane}
+        discoverBusy={discoverBusy}
+        onRunDiscover={(opts) => void runDiscover(opts)}
+        onOpenMarketplace={() => setSurface("marketplace")}
+        network={network}
+        onNetwork={setNetwork}
+      />
+    );
+  }
+
   return (
     <main
       className={cn(
@@ -498,6 +612,14 @@ function AugmentsPage() {
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-md sm:px-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              onClick={() => setSurface("ops")}
+            >
+              ← Ops
+            </Button>
             <h1 className="font-display text-sm font-semibold tracking-tight sm:text-base">
               {OPTX_MARK} · Augment Marketplace
             </h1>

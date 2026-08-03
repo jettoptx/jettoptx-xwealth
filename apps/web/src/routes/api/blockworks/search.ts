@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireJtxGate } from "@/lib/auth/jtx-require.server";
 import {
   BLOCKWORKS_MCP_URL,
   BLOCKWORKS_PRODUCT,
@@ -39,12 +40,17 @@ export const Route = createFileRoute("/api/blockworks/search")({
           query?: string;
           mode?: "crypto" | "defi" | "all";
           limit?: number;
+          wallet?: string;
+          solanaWallet?: string;
         };
         try {
           body = (await request.json()) as typeof body;
         } catch {
           return Response.json({ error: "invalid_json" }, { status: 400 });
         }
+
+        const gate = await requireJtxGate(request, body);
+        if (!gate.ok) return gate.response;
 
         const query = body.query?.trim() ?? "";
         if (!query || query.length > 120) {

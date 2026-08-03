@@ -201,22 +201,44 @@ function DojoHubPage() {
             </div>
           </div>
           {gate ? (
-            <p
-              className={cn(
-                "rounded-lg border px-3 py-2 font-mono text-xs",
-                gate.ok
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                  : "border-warn/30 bg-warn/10 text-warn",
-              )}
-            >
-              {gate.ok
-                ? `PASS · ${gate.uiAmount} JTX · dry-run tools unlocked`
-                : `FAIL · ${gate.error ?? "need ≥1 JTX"} — pay tools stay locked`}
-            </p>
+            <div className="space-y-2">
+              <p
+                className={cn(
+                  "rounded-lg border px-3 py-2 font-mono text-xs",
+                  gate.ok
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                    : "border-warn/30 bg-warn/10 text-warn",
+                )}
+              >
+                {gate.ok
+                  ? `PASS · ${gate.uiAmount} JTX · dry-run tools unlocked`
+                  : `FAIL · ${gate.error ?? "need ≥1 JTX"} — pay tools stay locked`}
+              </p>
+              {!gate.ok ? (
+                <Button asChild size="sm" variant="secondary" className="w-full sm:w-auto">
+                  <a
+                    href={OPTX_LINKS.jtxBuy}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Buy JTX · astroknots.space/buy
+                  </a>
+                </Button>
+              ) : null}
+            </div>
           ) : (
             <p className="text-xs text-muted">
               Run the gate before dry-run x402. CLI equivalent:{" "}
               <code className="text-[11px]">npm run check-jtx</code>
+              {" · "}
+              <a
+                href={OPTX_LINKS.jtxBuy}
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent underline-offset-2 hover:underline"
+              >
+                Buy JTX
+              </a>
             </p>
           )}
         </CardContent>
@@ -240,8 +262,16 @@ function DojoHubPage() {
         <div className="relative lg:col-span-2">
           {!jtxOk ? (
             <div className="mb-2 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
-              JTX gate locked — paste a wallet with ≥1 JTX and re-check to use
-              x402 dry-run / X Wallet Pay intent.
+              JTX gate locked — paste a wallet with ≥1 JTX and re-check, or{" "}
+              <a
+                href={OPTX_LINKS.jtxBuy}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium underline underline-offset-2"
+              >
+                buy JTX at astroknots.space/buy
+              </a>
+              .
             </div>
           ) : null}
           <fieldset disabled={!jtxOk} className="min-w-0 disabled:pointer-events-none">

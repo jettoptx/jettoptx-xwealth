@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireJtxGate } from "@/lib/auth/jtx-require.server";
 import { fetchSocialGraph } from "@/lib/x-api";
 
 /**
@@ -16,12 +17,17 @@ export const Route = createFileRoute("/api/x/social-graph")({
           accessToken?: string;
           limit?: number;
           probeMoney?: boolean;
+          wallet?: string;
+          solanaWallet?: string;
         };
         try {
           body = (await request.json()) as typeof body;
         } catch {
           return Response.json({ error: "invalid_json" }, { status: 400 });
         }
+
+        const gate = await requireJtxGate(request, body);
+        if (!gate.ok) return gate.response;
 
         const accessToken =
           body.accessToken?.trim() ||
