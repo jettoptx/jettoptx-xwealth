@@ -11,7 +11,6 @@ import {
   Settings2,
   Sun,
   Unlink,
-  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { RedirectToSignIn } from "@/lib/auth/gates";
@@ -29,7 +28,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { XLogo } from "@/components/brand-icons";
+import {
+  AppleLogo,
+  AuthMethodIcon,
+  GitHubLogo,
+  GoogleLogo,
+  MailLogo,
+  PhoneLogo,
+  WalletLogo,
+  XLogo,
+} from "@/components/brand-icons";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
@@ -626,18 +634,30 @@ function ExternalLinksCard() {
   );
 }
 
+/** Same local brand marks as /login — inline SVGs from brand-icons. */
 function ConnectionIcon({ id }: { id: ConnectionId }) {
-  const wrap = (child: ReactNode) => (
-    <span className="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-bg text-fg">
-      {child}
-    </span>
-  );
-  if (id === "twitter") return wrap(<XLogo className="size-4" />);
-  if (id === "wallet") return wrap(<Wallet className="size-4 text-augment" />);
-  return wrap(
-    <span className="font-mono text-[10px] font-semibold uppercase text-muted">
-      {id.slice(0, 2)}
-    </span>,
+  const icon =
+    id === "twitter" ? (
+      <XLogo className="size-4 text-white" />
+    ) : id === "google" ? (
+      <GoogleLogo className="size-4" />
+    ) : id === "apple" ? (
+      <AppleLogo className="size-4" />
+    ) : id === "github" ? (
+      <GitHubLogo className="size-4" />
+    ) : id === "email" ? (
+      <MailLogo className="size-4" />
+    ) : id === "sms" ? (
+      <PhoneLogo className="size-4" />
+    ) : (
+      <WalletLogo className="size-4" />
+    );
+
+  // Fixed dark plate so Apple/GitHub light fills stay readable in light theme.
+  return (
+    <AuthMethodIcon className="size-9 rounded-md border-white/15 bg-[#141416]">
+      {icon}
+    </AuthMethodIcon>
   );
 }
 
