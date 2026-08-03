@@ -1,12 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { LayoutDashboard, ScrollText, Settings2, Sparkles } from "lucide-react";
+import { FlaskConical, LayoutDashboard, Settings2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { to: "/console" as const, label: "Console", icon: LayoutDashboard },
   { to: "/augments" as const, label: "Augments", icon: Sparkles, accent: true },
   { to: "/settings" as const, label: "Settings", icon: Settings2 },
-  { to: "/exhibit" as const, label: "E𝕏hibit", icon: ScrollText },
+  { to: "/dojo" as const, label: "DOJO", icon: FlaskConical },
 ];
 
 /** Fixed bottom tab bar — mobile only. */

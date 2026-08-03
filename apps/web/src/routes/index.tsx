@@ -332,7 +332,7 @@ function HeroCtas() {
         </Button>
       )}
       <Button asChild size="lg" variant="secondary">
-        <Link to="/exhibit">E𝕏hibit kit</Link>
+        <Link to="/dojo">DOJO</Link>
       </Button>
     </div>
   );
