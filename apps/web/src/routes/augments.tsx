@@ -602,14 +602,14 @@ function AugmentsPage() {
   return (
     <main
       className={cn(
-        "flex flex-col overflow-hidden bg-bg/40",
+        "flex flex-col overflow-hidden bg-bg",
         embed
           ? "h-dvh max-h-dvh"
           : "h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-3.5rem)]",
       )}
     >
       {/* Top chrome â€” fixed height, no page scroll */}
-      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-md sm:px-4">
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2 backdrop-blur-md sm:px-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -986,7 +986,7 @@ function AugmentsPage() {
                         <Button
                           type="button"
                           size="sm"
-                          className="h-8 bg-cyan-600 text-white hover:bg-cyan-500"
+                          className="h-8 bg-sky-700 text-white hover:bg-sky-600 dark:bg-cyan-600 dark:hover:bg-cyan-500"
                           disabled={
                             discoverBusy ||
                             (lane === "agents" && !(tfStatus?.configured))
@@ -1022,7 +1022,7 @@ function AugmentsPage() {
                                       : undefined,
                               });
                             }}
-                            className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted hover:border-cyan-500/40 hover:text-cyan-200"
+                            className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted hover:border-sky-500/40 hover:text-sky-800 dark:hover:border-cyan-500/40 dark:hover:text-cyan-200"
                           >
                             {p.label}
                           </button>
@@ -1052,7 +1052,7 @@ function AugmentsPage() {
                               key={`${a.source}-${a.id}`}
                               className="flex items-center gap-2 rounded border border-border/60 bg-bg/60 px-2 py-1 text-[11px]"
                             >
-                              <span className="font-mono text-violet-300">
+                              <span className="font-mono text-violet-700 dark:text-violet-300">
                                 {a.symbol}
                               </span>
                               <span className="min-w-0 flex-1 truncate text-muted">
@@ -1227,9 +1227,9 @@ function DashWindow({
   return (
     <section
       data-panel={id}
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface/95 shadow-panel"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border-strong/70 bg-surface shadow-panel"
     >
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-border bg-elevated/50 px-2 py-1">
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-border bg-elevated/70 px-2 py-1">
         <GripVertical
           className="size-3.5 shrink-0 cursor-grab text-subtle active:cursor-grabbing"
           aria-hidden
@@ -1287,7 +1287,7 @@ function ApiPluginTile({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border border-border bg-bg/70 transition hover:border-cyan-500/35 hover:bg-elevated/40",
+        "flex flex-col rounded-xl border border-border bg-surface shadow-sm transition hover:border-sky-500/40 hover:bg-elevated/50 dark:bg-bg/70 dark:shadow-none dark:hover:border-cyan-500/35 dark:hover:bg-elevated/40",
         compact ? "p-2" : "p-3",
       )}
       style={{ borderTopColor: plugin.accent, borderTopWidth: 2 }}
@@ -1297,7 +1297,7 @@ function ApiPluginTile({
           {plugin.logo ? (
             <span
               className={cn(
-                "flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/40",
+                "flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-elevated dark:border-white/10 dark:bg-black/40",
                 compact ? "size-8" : "size-9",
               )}
               style={{ boxShadow: `inset 0 0 0 1px ${plugin.accent}33` }}
@@ -1332,7 +1332,7 @@ function ApiPluginTile({
           href={plugin.href}
           target="_blank"
           rel="noreferrer"
-          className="shrink-0 text-muted hover:text-cyan-300"
+          className="shrink-0 text-muted hover:text-sky-700 dark:hover:text-cyan-300"
           title="Open plugin"
           onClick={(e) => e.stopPropagation()}
         >
@@ -1352,7 +1352,7 @@ function ApiPluginTile({
           type="button"
           size="sm"
           variant="outline"
-          className="h-6 flex-1 border-cyan-500/30 text-[10px]"
+          className="h-6 flex-1 border-sky-600/35 text-[10px] text-fg dark:border-cyan-500/30"
           disabled={busy}
           onClick={onDiscover}
         >
@@ -1394,7 +1394,7 @@ function MoneyBadge({ value }: { value?: boolean | null }) {
   if (value === true) {
     return (
       <Badge
-        className="border-emerald-500/40 bg-emerald-500/15 font-mono text-[10px] text-emerald-300"
+        className="border-emerald-600/40 bg-emerald-500/15 font-mono text-[10px] text-emerald-800 dark:border-emerald-500/40 dark:text-emerald-300"
         title="X Money pay surface detected (TinyFish / HTML probe)"
       >
         ✓ Money
@@ -1405,7 +1405,7 @@ function MoneyBadge({ value }: { value?: boolean | null }) {
     return (
       <Badge
         variant="outline"
-        className="border-rose-500/30 font-mono text-[10px] text-rose-400/80"
+        className="border-rose-600/35 font-mono text-[10px] text-rose-700 dark:border-rose-500/30 dark:text-rose-400/80"
         title="Probed — no X Money pay surface found for this handle"
       >
         ✗ No Money
@@ -1415,7 +1415,7 @@ function MoneyBadge({ value }: { value?: boolean | null }) {
   return (
     <Badge
       variant="outline"
-      className="cursor-help border-dashed font-mono text-[10px] text-muted/60"
+      className="cursor-help border-dashed font-mono text-[10px] text-muted"
       title="Not probed yet. Click 'Probe Money' to check. X has no public API for Money enrollment."
     >
       ? Unprobed
@@ -1567,7 +1567,7 @@ function ListingTableRow({
               ) : null}
               {item.live ? (
                 <span
-                  className="rounded bg-sky-500/15 px-1 font-mono text-[9px] uppercase text-sky-300"
+                  className="rounded bg-sky-500/15 px-1 font-mono text-[9px] uppercase text-sky-800 dark:text-sky-300"
                   title="From your X following/followers graph — not X Money status"
                 >
                   graph
@@ -1771,10 +1771,10 @@ function TinyFishPanel({
   onEnrich: (deep: boolean) => void;
 }) {
   return (
-    <Card className="border-cyan-500/20">
+    <Card className="border-sky-600/25 dark:border-cyan-500/20">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Fish className="size-4 text-cyan-400" />
+          <Fish className="size-4 text-sky-700 dark:text-cyan-400" />
           TinyFish agent
         </CardTitle>
         <CardDescription className="text-xs leading-relaxed">
@@ -1783,7 +1783,7 @@ function TinyFishPanel({
             href={docs}
             target="_blank"
             rel="noreferrer"
-            className="text-cyan-400/90 underline-offset-2 hover:underline"
+            className="text-sky-800 underline-offset-2 hover:underline dark:text-cyan-400/90"
           >
             TinyFish MCP / Fetch API
           </a>
@@ -1793,9 +1793,9 @@ function TinyFishPanel({
       </CardHeader>
       <CardContent className="space-y-3">
         {!configured ? (
-          <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-100/90">
+          <div className="rounded-lg border border-amber-600/30 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-900 dark:border-amber-500/25 dark:text-amber-100/90">
             Server key missing. Set{" "}
-            <code className="text-amber-50">TINYFISH_API_KEY</code> in Vercel /
+            <code className="text-amber-950 dark:text-amber-50">TINYFISH_API_KEY</code> in Vercel /
             .env.local, then redeploy.{" "}
             <a
               href={keysUrl}
@@ -1816,7 +1816,7 @@ function TinyFishPanel({
           <Button
             type="button"
             size="sm"
-            className="w-full bg-cyan-600 text-white hover:bg-cyan-500"
+            className="w-full bg-sky-700 text-white hover:bg-sky-600 dark:bg-cyan-600 dark:hover:bg-cyan-500"
             disabled={!configured || enriching}
             onClick={() => onEnrich(false)}
           >

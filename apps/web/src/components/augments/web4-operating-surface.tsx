@@ -324,14 +324,14 @@ export function Web4OperatingSurface({
   return (
     <main
       className={cn(
-        "flex overflow-hidden bg-[#07070a] text-fg",
+        "flex overflow-hidden bg-bg text-fg",
         embed
           ? "h-dvh max-h-dvh"
           : "h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)]",
       )}
     >
       {/* Left rail */}
-      <aside className="hidden w-14 shrink-0 flex-col items-center gap-1 border-r border-white/8 bg-black/40 py-3 sm:flex">
+      <aside className="hidden w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-surface/80 py-3 sm:flex">
         {RAIL.map((item) => {
           const Icon = item.icon;
           const active = rail === item.id;
@@ -344,8 +344,8 @@ export function Web4OperatingSurface({
               className={cn(
                 "flex size-9 items-center justify-center rounded-lg transition",
                 active
-                  ? "bg-accent/20 text-accent shadow-[0_0_20px_rgba(255,105,0,0.25)]"
-                  : "text-subtle hover:bg-white/5 hover:text-fg",
+                  ? "bg-accent/15 text-accent shadow-[0_0_16px_color-mix(in_oklab,var(--color-accent)_28%,transparent)] dark:bg-accent/20 dark:shadow-[0_0_20px_rgba(255,105,0,0.25)]"
+                  : "text-subtle hover:bg-elevated hover:text-fg",
               )}
             >
               <Icon className="size-4" />
@@ -356,12 +356,12 @@ export function Web4OperatingSurface({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
-        <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-white/8 bg-gradient-to-r from-[#0b1020] via-[#0a0a0c] to-[#120a14] px-3 py-2 sm:px-4">
+        <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-gradient-to-r from-surface via-bg to-elevated/80 px-3 py-2 sm:px-4 dark:from-[#0b1020] dark:via-[#0a0a0c] dark:to-[#120a14]">
           <div className="min-w-0 shrink-0">
             <div className="font-display text-sm font-semibold tracking-tight">
               {OPTX_MARK} · Augments
             </div>
-            <div className="font-mono text-[10px] text-cyan-300/80">
+            <div className="font-mono text-[10px] text-sky-700 dark:text-cyan-300/80">
               Web4 Search & Tooling
             </div>
           </div>
@@ -387,7 +387,7 @@ export function Web4OperatingSurface({
                   className={cn(
                     "rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide",
                     cmdTab === id
-                      ? "bg-cyan-500/15 text-cyan-200"
+                      ? "bg-sky-600/12 text-sky-800 dark:bg-cyan-500/15 dark:text-cyan-200"
                       : "text-subtle hover:text-fg",
                   )}
                 >
@@ -397,13 +397,13 @@ export function Web4OperatingSurface({
             </div>
             <div
               className={cn(
-                "flex items-center gap-2 rounded-xl border bg-black/50 px-3 py-1.5 backdrop-blur-md transition",
+                "flex items-center gap-2 rounded-xl border bg-surface/90 px-3 py-1.5 shadow-sm backdrop-blur-md transition dark:bg-black/50 dark:shadow-none",
                 cmdFocused
-                  ? "border-cyan-400/50 shadow-[0_0_24px_rgba(34,211,238,0.15)]"
-                  : "border-white/10",
+                  ? "border-sky-500/45 shadow-[0_0_20px_rgba(14,165,233,0.12)] dark:border-cyan-400/50 dark:shadow-[0_0_24px_rgba(34,211,238,0.15)]"
+                  : "border-border",
               )}
             >
-              <Command className="size-3.5 shrink-0 text-cyan-300/70" />
+              <Command className="size-3.5 shrink-0 text-sky-700/80 dark:text-cyan-300/70" />
               <Input
                 id="web4-cmd-input"
                 value={discoverQ}
@@ -416,7 +416,7 @@ export function Web4OperatingSurface({
                 placeholder="Search chains, agents, protocols, docs…"
                 className="h-8 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
               />
-              <kbd className="hidden rounded border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-subtle sm:inline">
+              <kbd className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-subtle sm:inline">
                 ⌘K
               </kbd>
               <Button
@@ -439,7 +439,7 @@ export function Web4OperatingSurface({
             <select
               value={network}
               onChange={(e) => onNetwork(e.target.value)}
-              className="h-8 rounded-md border border-white/10 bg-black/40 px-2 font-mono text-[11px] text-fg"
+              className="h-8 rounded-md border border-border bg-surface px-2 font-mono text-[11px] text-fg dark:bg-black/40"
               title="Network"
             >
               <option value="all">All nets</option>
@@ -495,13 +495,13 @@ export function Web4OperatingSurface({
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {/* Hero / search zone */}
-          <section className="relative border-b border-white/8 px-3 py-5 sm:px-6">
+          <section className="relative border-b border-border px-3 py-5 sm:px-6">
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.08),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgba(255,105,0,0.08),_transparent_45%)]"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(14,165,233,0.10),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgba(196,95,24,0.10),_transparent_45%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.08),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgba(255,105,0,0.08),_transparent_45%)]"
             />
             <div className="relative mx-auto max-w-5xl space-y-3">
-              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-300/70">
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-sky-700/80 dark:text-cyan-300/70">
                 {WEB4_SEO.name}
               </p>
               <p className="font-display text-lg font-semibold tracking-tight text-accent sm:text-xl">
@@ -532,7 +532,7 @@ export function Web4OperatingSurface({
                               : "search",
                       );
                     }}
-                    className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[11px] text-muted hover:border-cyan-400/40 hover:text-fg"
+                    className="rounded-full border border-border bg-elevated/70 px-2.5 py-1 font-mono text-[11px] text-muted hover:border-sky-500/40 hover:text-fg dark:bg-white/5 dark:hover:border-cyan-400/40"
                   >
                     {f}
                   </button>
@@ -547,14 +547,14 @@ export function Web4OperatingSurface({
                       onDiscoverQ(q);
                       runSearch(q);
                     }}
-                    className="rounded-md border border-dashed border-white/15 px-2 py-1 text-left text-[11px] text-subtle hover:border-accent/50 hover:text-fg"
+                    className="rounded-md border border-dashed border-border-strong px-2 py-1 text-left text-[11px] text-muted hover:border-accent/50 hover:text-fg"
                   >
                     {q}
                   </button>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-3 text-[11px] text-subtle">
-                <span className="font-mono uppercase tracking-wide">
+              <div className="flex flex-wrap gap-3 text-[11px] text-muted">
+                <span className="font-mono uppercase tracking-wide text-subtle">
                   Recent
                 </span>
                 {recent.length === 0 ? (
@@ -564,7 +564,7 @@ export function Web4OperatingSurface({
                     <button
                       key={r}
                       type="button"
-                      className="text-cyan-200/80 hover:underline"
+                      className="text-sky-800 hover:underline dark:text-cyan-200/80"
                       onClick={() => {
                         onDiscoverQ(r);
                         runSearch(r);
@@ -574,8 +574,8 @@ export function Web4OperatingSurface({
                     </button>
                   ))
                 )}
-                <span className="mx-1 text-white/20">·</span>
-                <span className="font-mono uppercase tracking-wide">
+                <span className="mx-1 text-border-strong">·</span>
+                <span className="font-mono uppercase tracking-wide text-subtle">
                   Pinned
                 </span>
                 <Link to="/dojo" className="text-accent hover:underline">
@@ -679,7 +679,7 @@ export function Web4OperatingSurface({
         {/* Agent session panel */}
         <section
           className={cn(
-            "shrink-0 border-t border-white/10 bg-black/60 backdrop-blur-md",
+            "shrink-0 border-t border-border bg-surface/95 backdrop-blur-md dark:bg-black/60",
             agentOpen ? "max-h-[30vh]" : "max-h-10",
           )}
         >
@@ -688,7 +688,7 @@ export function Web4OperatingSurface({
             className="flex w-full items-center justify-between px-3 py-2 text-left sm:px-4"
             onClick={() => setAgentOpen((o) => !o)}
           >
-            <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-wide text-cyan-200/80">
+            <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-wide text-sky-800 dark:text-cyan-200/80">
               <Terminal className="size-3.5" />
               Agent & session workspace
             </span>
@@ -765,12 +765,12 @@ function ToolCard({
             <img
               src={m.logo}
               alt=""
-              className="size-7 rounded-md border border-white/10 object-cover"
+              className="size-7 rounded-md border border-border bg-elevated/80 object-cover dark:bg-transparent"
             />
           ) : (
             <span
-              className="flex size-7 items-center justify-center rounded-md border border-white/10"
-              style={{ color: m.accent ?? "#22d3ee" }}
+              className="flex size-7 items-center justify-center rounded-md border border-border bg-elevated/60"
+              style={{ color: m.accent ?? "#0e7490" }}
             >
               <FlaskConical className="size-3.5" />
             </span>
@@ -784,9 +784,11 @@ function ToolCard({
           variant="outline"
           className={cn(
             "font-mono text-[9px]",
-            m.status === "Active" && "border-emerald-500/40 text-emerald-300",
-            m.status === "Beta" && "border-cyan-500/40 text-cyan-200",
-            m.status === "Local" && "border-white/20 text-subtle",
+            m.status === "Active" &&
+              "border-emerald-600/40 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-300",
+            m.status === "Beta" &&
+              "border-sky-600/40 text-sky-800 dark:border-cyan-500/40 dark:text-cyan-200",
+            m.status === "Local" && "border-border-strong text-subtle",
           )}
         >
           {m.status}
@@ -794,7 +796,7 @@ function ToolCard({
       </div>
       <p className="mt-2 line-clamp-2 text-xs text-muted">{m.blurb}</p>
       <div className="mt-3">
-        <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-[10px] uppercase text-fg group-hover:border-cyan-400/40">
+        <span className="inline-flex items-center gap-1 rounded-md border border-border bg-elevated/80 px-2 py-1 font-mono text-[10px] uppercase text-fg group-hover:border-sky-500/45 dark:bg-white/5 dark:group-hover:border-cyan-400/40">
           {m.action}
           <ExternalLink className="size-2.5 opacity-60" />
         </span>
@@ -803,7 +805,7 @@ function ToolCard({
   );
 
   const className =
-    "group block h-full rounded-xl border border-white/10 bg-white/[0.03] p-3 backdrop-blur-md transition hover:-translate-y-0.5 hover:border-cyan-400/30 hover:bg-white/[0.06] hover:shadow-[0_8px_30px_rgba(34,211,238,0.08)]";
+    "group block h-full rounded-xl border border-border bg-surface p-3 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:border-sky-500/35 hover:bg-elevated/50 hover:shadow-[0_8px_28px_rgba(14,165,233,0.08)] dark:border-white/10 dark:bg-white/[0.03] dark:shadow-none dark:hover:border-cyan-400/30 dark:hover:bg-white/[0.06] dark:hover:shadow-[0_8px_30px_rgba(34,211,238,0.08)]";
 
   if (m.pluginId) {
     return (
@@ -848,12 +850,12 @@ function SessionCard({
 }) {
   const badge =
     status === "ready"
-      ? "text-emerald-300"
+      ? "text-emerald-700 dark:text-emerald-300"
       : status === "locked"
         ? "text-warn"
         : "text-subtle";
   const body = (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5">
+    <div className="rounded-lg border border-border bg-elevated/50 p-2.5 dark:border-white/10 dark:bg-white/[0.03]">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium">{title}</span>
         <span className={cn("font-mono text-[10px] uppercase", badge)}>
@@ -861,7 +863,7 @@ function SessionCard({
         </span>
       </div>
       <p className="mt-1 text-[11px] text-muted">{meta}</p>
-      <span className="mt-2 inline-block font-mono text-[10px] text-cyan-200/80">
+      <span className="mt-2 inline-block font-mono text-[10px] text-sky-800 dark:text-cyan-200/80">
         {actionLabel} →
       </span>
     </div>
