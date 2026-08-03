@@ -1,6 +1,56 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/*
+ * Neue Haas Unica — self-hosted commercial face (Monotype).
+ * Drop licensed woff2 files in /public/fonts/ (see public/fonts/README.md).
+ * Metric-matched local fallbacks keep layout stable before/without the files.
+ */
+@font-face {
+  font-family: "Neue Haas Unica";
+  src: url("/fonts/NeueHaasUnica-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Neue Haas Unica";
+  src: url("/fonts/NeueHaasUnica-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+/* map semibold/bold UI classes onto Medium when heavier cuts are not loaded */
+@font-face {
+  font-family: "Neue Haas Unica";
+  src: url("/fonts/NeueHaasUnica-Medium.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Neue Haas Unica";
+  src: url("/fonts/NeueHaasUnica-Medium.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Neue Haas Unica";
+  src: url("/fonts/NeueHaasUnica-Medium.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Neue Haas Unica Fallback";
+  src: local("Arial"), local("Helvetica Neue"), local("Helvetica");
+  size-adjust: 105%;
+  ascent-override: 95%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
 @theme {
   --color-bg: #0a0a0c;
   --color-surface: #121214;
@@ -24,9 +74,13 @@
   /* mono brand icons loaded as <img> (Hermes/Nous) */
   --harness-icon-filter: invert(1);
 
-  --font-sans: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Neue Haas Unica", "Neue Haas Unica Fallback", ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Neue Haas Unica", "Neue Haas Unica Fallback", ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sub: "Neue Haas Unica", "Neue Haas Unica Fallback", ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
@@ -86,7 +140,7 @@ html[data-theme="light"] {
     background: var(--color-bg);
     color: var(--color-fg);
     font-family: var(--font-sans);
-    font-feature-settings: "ss01" on, "cv11" on;
+    font-weight: 400;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     transition:
@@ -138,6 +192,12 @@ img[src*="jtx-dao-rounded"] {
 
   .font-display {
     font-family: var(--font-display);
+  }
+  .font-sans {
+    font-family: var(--font-sans);
+  }
+  .font-sub {
+    font-family: var(--font-sub);
   }
   .font-mono {
     font-family: var(--font-mono);

@@ -315,7 +315,7 @@ export function WealthMoaCanvas({
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         if (n.digit) {
-          ctx.font = `600 ${Math.max(10, r * 0.45)}px Syne, system-ui, sans-serif`
+          ctx.font = `600 ${Math.max(10, r * 0.45)}px "Neue Haas Unica", "Neue Haas Unica Fallback", system-ui, sans-serif`
           ctx.fillStyle = dimmed ? 'rgba(240,237,232,0.35)' : '#F0EDE8'
           ctx.fillText(n.digit, n.x, n.y - 2)
         }

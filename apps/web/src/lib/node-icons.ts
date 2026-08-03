@@ -171,7 +171,7 @@ function drawMoney(ctx: CanvasRenderingContext2D, s: number) {
   ctx.beginPath()
   ctx.arc(0, 0, r, 0, Math.PI * 2)
   ctx.stroke()
-  ctx.font = `700 ${Math.round(s * 0.42)}px Syne, system-ui, sans-serif`
+  ctx.font = `700 ${Math.round(s * 0.42)}px "Neue Haas Unica", "Neue Haas Unica Fallback", system-ui, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText('$', 0, 1)
