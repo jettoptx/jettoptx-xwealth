@@ -30,7 +30,8 @@ import { OPTX_LINKS } from "@/lib/optx-links";
 import { jtxDeniedMessage, jtxFetch, JTX_BUY_URL } from "@/lib/jtx-api";
 import {
   checkJtxGate,
-  defaultWalletFromEnv,
+  isOwnedSolanaWallet,
+  jtxUiGatePassed,
   type JtxGateResult,
 } from "@/lib/jtxGate";
 import { Web4OperatingSurface } from "@/components/augments/web4-operating-surface";
@@ -59,6 +60,7 @@ import {
 import { avatarProxyUrl } from "@/lib/auth/profile-image";
 import { useXOAuthAccess } from "@/lib/auth/x-oauth-tokens";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { usePrivySolanaWallet } from "@/lib/auth/use-privy-solana-wallet";
 import { useSocialGraph } from "@/lib/use-social-graph";
 import { useWealthStore } from "@/lib/store";
 import { copyText } from "@/lib/utils";
@@ -209,42 +211,93 @@ function AugmentsPage() {
 
   const starred = useWealthStore((s) => s.starredAugments);
   const toggleStar = useWealthStore((s) => s.toggleStarAugment);
-  const walletStore = useWealthStore((s) => s.solanaWallet);
   const setSolanaWallet = useWealthStore((s) => s.setSolanaWallet);
+  const {
+    authenticated: privyAuthed,
+    addresses: privyAddresses,
+    primaryAddress: privyPrimary,
+    creating: privyCreating,
+    login: privyLogin,
+    ensureWallet,
+  } = usePrivySolanaWallet();
 
   /** Default = Web4 ops dashboard; marketplace = legacy directory panels */
   const [surface, setSurface] = useState<"ops" | "marketplace">("ops");
-  const [wallet, setWallet] = useState(
-    () => walletStore || defaultWalletFromEnv(),
-  );
   const [gate, setGate] = useState<JtxGateResult | null>(null);
   const [gateBusy, setGateBusy] = useState(false);
   const [network, setNetwork] = useState("solana");
 
+  const wallet = privyPrimary ?? "";
+
   useEffect(() => {
-    if (walletStore && walletStore !== wallet) setWallet(walletStore);
-  }, [walletStore, wallet]);
+    if (!privyAuthed) {
+      setGate(null);
+      return;
+    }
+    if (privyPrimary) setSolanaWallet(privyPrimary);
+    setGate((prev) =>
+      prev && isOwnedSolanaWallet(prev.wallet, privyAddresses) ? prev : null,
+    );
+  }, [privyAuthed, privyPrimary, privyAddresses, setSolanaWallet]);
 
   const runGate = useCallback(async () => {
-    const w = wallet.trim();
-    if (w.length < 32) return;
+    if (!privyAuthed) {
+      privyLogin();
+      toast.error("Sign in to check JTX on your Privy Solana wallet");
+      return;
+    }
     setGateBusy(true);
     try {
+      const w = (await ensureWallet()).trim();
       const result = await checkJtxGate(w);
-      setGate(result);
+      const owned = privyAddresses.includes(w)
+        ? privyAddresses
+        : [...privyAddresses, w];
+      const passed = result.ok && isOwnedSolanaWallet(result.wallet, owned);
+      setGate(
+        passed
+          ? result
+          : {
+              ...result,
+              ok: false,
+              error: result.ok
+                ? "JTX balance must be on your Privy Solana wallet"
+                : (result.error ?? "Need ≥1 JTX"),
+            },
+      );
       setSolanaWallet(w);
-      if (result.ok) toast.success(`JTX pass · ${result.uiAmount}`);
+      if (passed) toast.success(`JTX pass · ${result.uiAmount}`);
       else
-        toast.error(result.error ?? "Need ≥1 JTX", {
+        toast.error(result.error ?? "Need ≥1 JTX on your Privy wallet", {
           action: {
             label: "Buy JTX",
             onClick: () => window.open(JTX_BUY_URL, "_blank"),
           },
         });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gate check failed");
+      setGate(null);
     } finally {
       setGateBusy(false);
     }
-  }, [wallet, setSolanaWallet]);
+  }, [
+    privyAuthed,
+    privyLogin,
+    ensureWallet,
+    privyAddresses,
+    setSolanaWallet,
+  ]);
+
+  const ownedForUi =
+    wallet && !privyAddresses.includes(wallet)
+      ? [...privyAddresses, wallet]
+      : privyAddresses;
+  const jtxUiOk = jtxUiGatePassed(
+    gate,
+    gate?.wallet && !ownedForUi.includes(gate.wallet)
+      ? [...ownedForUi, gate.wallet]
+      : ownedForUi,
+  );
 
   useEffect(() => {
     void fetch("/api/tinyfish/enrich")
@@ -579,11 +632,11 @@ function AugmentsPage() {
       <Web4OperatingSurface
         embed={embed}
         wallet={wallet}
-        onWalletChange={(w) => {
-          setWallet(w);
-          setSolanaWallet(w);
-        }}
-        jtxOk={gate ? gate.ok : null}
+        walletLocked
+        authenticated={privyAuthed}
+        walletCreating={privyCreating}
+        onSignIn={() => privyLogin()}
+        jtxOk={gate ? jtxUiOk : null}
         jtxBusy={gateBusy}
         onCheckJtx={() => void runGate()}
         discoverQ={discoverQ}
