@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireJtxGate } from "@/lib/auth/jtx-require.server";
 import {
   extractHandlesFromSearch,
   searchWeb4,
@@ -33,18 +34,6 @@ export const Route = createFileRoute("/api/tinyfish/search")({
         });
       },
       POST: async ({ request }) => {
-        if (!tinyfishConfigured()) {
-          return Response.json(
-            {
-              error: "tinyfish_not_configured",
-              message: "Set TINYFISH_API_KEY for Web4 Discover search.",
-              mcp: TINYFISH_MCP_URL,
-              keys: TINYFISH_DASHBOARD,
-            },
-            { status: 503 },
-          );
-        }
-
         let body: {
           query?: string;
           location?: string;
@@ -55,11 +44,28 @@ export const Route = createFileRoute("/api/tinyfish/search")({
           excludeDomains?: string;
           recencyMinutes?: number;
           page?: number;
+          wallet?: string;
+          solanaWallet?: string;
         };
         try {
           body = (await request.json()) as typeof body;
         } catch {
           return Response.json({ error: "invalid_json" }, { status: 400 });
+        }
+
+        const gate = await requireJtxGate(request, body);
+        if (!gate.ok) return gate.response;
+
+        if (!tinyfishConfigured()) {
+          return Response.json(
+            {
+              error: "tinyfish_not_configured",
+              message: "Set TINYFISH_API_KEY for Web4 Discover search.",
+              mcp: TINYFISH_MCP_URL,
+              keys: TINYFISH_DASHBOARD,
+            },
+            { status: 503 },
+          );
         }
 
         const query = body.query?.trim() ?? "";

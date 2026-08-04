@@ -1,24 +1,16 @@
-# Fonts — Neue Haas Unica
+# Fonts — D-DIN Expanded
 
-xwealth.space body + display type uses **Neue Haas Unica** (Monotype), self-hosted.
+xwealth.space body + display type uses **D-DIN Expanded** (Datto / Monotype),
+self-hosted under the SIL Open Font License v1.1 (`OFL-D-DIN.txt`).
 
-## Required files
-
-Place licensed web cuts here (woff2):
+## Files
 
 | File | Weight |
 |------|--------|
-| `NeueHaasUnica-Regular.woff2` | 400 |
-| `NeueHaasUnica-Medium.woff2` | 500 (+ mapped for 600/700/800 UI classes) |
+| `D-DINExp.woff2` | 400 Regular |
+| `D-DINExp-Italic.woff2` | 400 Italic |
+| `D-DINExp-Bold.woff2` | 700 Bold (+ mapped for 500/600/800 UI classes) |
 
-Optional later: Italic / Bold if you license more cuts — then update `@font-face` in `src/styles.css`.
+Source: [Font Squirrel D-DIN](https://www.fontsquirrel.com/fonts/d-din) / Datto OFL release.
 
-## License
-
-Do **not** commit unlicensed font binaries. Obtain a web license (MyFonts / Monotype / Adobe Fonts export), then drop the woff2 files into this folder and redeploy.
-
-Until files are present, CSS falls back to **Arial / Helvetica Neue** via the metric-matched `Neue Haas Unica Fallback` face.
-
-## Mono
-
-`Space Mono` remains for code / mono UI (Google Fonts).
+Space Mono remains the mono/code face (loaded from Google Fonts in `__root.tsx`).

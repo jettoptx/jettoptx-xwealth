@@ -179,13 +179,50 @@ export async function sendRawTransactionBase64(
   return { ok: true, signature: out.result, rpc: out.rpc };
 }
 
+/** Read-only JSON-RPC methods allowed through the public browser proxy. */
+const RPC_READ_ALLOWLIST = new Set([
+  "getHealth",
+  "getSlot",
+  "getBalance",
+  "getTokenAccountsByOwner",
+  "getTokenAccountBalance",
+  "getAccountInfo",
+  "getMultipleAccounts",
+  "getLatestBlockhash",
+  "getSignatureStatuses",
+  "getTransaction",
+  "getVersion",
+  "getEpochInfo",
+]);
+
+function rpcMethodOf(body: unknown): string | null {
+  if (!body || typeof body !== "object") return null;
+  const m = (body as { method?: unknown }).method;
+  return typeof m === "string" ? m : null;
+}
+
 /**
- * Forward arbitrary JSON-RPC body to Helius (proxy handler).
- * Strips browser Origin so public RPCs don't 403; keeps api-key server-side.
+ * Forward allowlisted JSON-RPC body to Helius (proxy handler).
+ * Blocks sendTransaction / write methods. Keeps api-key server-side.
  */
 export async function proxySolanaJsonRpc(
   body: unknown,
 ): Promise<{ status: number; json: unknown }> {
+  const method = rpcMethodOf(body);
+  if (!method || !RPC_READ_ALLOWLIST.has(method)) {
+    return {
+      status: 403,
+      json: {
+        jsonrpc: "2.0",
+        id: (body as { id?: unknown })?.id ?? null,
+        error: {
+          code: -32601,
+          message: `Method not allowed on proxy: ${method ?? "(missing)"}`,
+        },
+      },
+    };
+  }
+
   const rpc = resolveSolanaRpcUrl();
   try {
     const res = await fetch(rpc, {

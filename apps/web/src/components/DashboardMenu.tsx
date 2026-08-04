@@ -21,7 +21,7 @@ export type DashboardMenuProps = {
   align?: "left" | "right";
 };
 
-type ShellRoute = "/augments" | "/dojo" | "/warp" | "/console" | "/exhibit";
+type ShellRoute = "/augments" | "/dojo" | "/warp" | "/console";
 
 export function DashboardMenu({
   view,
@@ -200,12 +200,6 @@ export function DashboardMenu({
             subtitle="X Money · x402"
             active={pathname === "/console"}
             onClick={() => goShell("/console")}
-          />
-          <NavItem
-            title="Exhibit"
-            subtitle="Developer exhibit"
-            active={pathname === "/exhibit"}
-            onClick={() => goShell("/exhibit")}
           />
 
           <div className="my-1 border-t border-white/[0.08]" />

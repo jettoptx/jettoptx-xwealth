@@ -43,10 +43,8 @@ export type AugmentEnrichment = {
 };
 
 function getApiKey(): string | null {
-  const k =
-    (process.env.TINYFISH_API_KEY as string | undefined)?.trim() ||
-    (process.env.VITE_TINYFISH_API_KEY as string | undefined)?.trim() ||
-    "";
+  // Server-only — never fall back to VITE_* (would ship into the client bundle).
+  const k = (process.env.TINYFISH_API_KEY as string | undefined)?.trim() || "";
   return k.length > 8 ? k : null;
 }
 

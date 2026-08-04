@@ -37,6 +37,9 @@ import {
   looksLikeSolanaPubkey,
   resolveSolanaPayTo,
 } from "@/lib/usdc-payto";
+import { jtxDeniedMessage, jtxHeaders, JTX_BUY_URL } from "@/lib/jtx-api";
+import { buildJtxProofHeaders } from "@/lib/jtx-proof";
+import { OPTX_LINKS } from "@/lib/optx-links";
 
 type PayMode = "dry" | "live";
 
@@ -241,34 +244,63 @@ export function X402Panel() {
         );
       }
 
-      // 3) Settle intent on our API
+      // 3) Settle — server requires ≥1 JTX + ownership proof (Phantom)
+      const proof = await buildJtxProofHeaders(walletStore || fromWallet);
+      if (!proof) {
+        const err =
+          "Connect Phantom (or a Solana wallet) to prove ownership before settle. Paste-pubkey alone is not enough for settle/mojo.";
+        push(`× ${err}`);
+        toast.error(err, {
+          action: {
+            label: "Buy JTX",
+            onClick: () => window.open(JTX_BUY_URL || OPTX_LINKS.jtxBuy, "_blank"),
+          },
+        });
+        return;
+      }
+
       const res = await fetch("/api/x402/pay", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "PAYMENT-SIGNATURE": sigBody,
-          "PAYMENT-REQUIRED": prHeader,
-          ...(isLive ? { "X-X402-MODE": "live" } : {}),
+          ...jtxHeaders(
+            {
+              "Content-Type": "application/json",
+              "PAYMENT-SIGNATURE": sigBody,
+              "PAYMENT-REQUIRED": prHeader,
+              "X-JTX-Proof": proof["X-JTX-Proof"],
+              "X-JTX-Message": proof["X-JTX-Message"],
+              ...(isLive ? { "X-X402-MODE": "live" } : {}),
+            },
+            proof["X-Solana-Wallet"],
+          ),
         },
         body: JSON.stringify({
           xHandle: money.handle,
           xMoneyUrl: money.transferUrl,
           amountUsdc: amount,
           mode: isLive ? "live" : "dry",
+          wallet: proof["X-Solana-Wallet"],
         }),
       });
 
       const data = (await res.json()) as
         | X402SettleResult
-        | { success: false; error: string };
+        | { success: false; error: string; buyUrl?: string; message?: string };
 
       if (!res.ok || !("success" in data) || !data.success) {
         const err =
-          data && "error" in data && data.error
-            ? String(data.error)
-            : `HTTP ${res.status}`;
+          "buyUrl" in data || ("error" in data && data.error === "jtx_required")
+            ? jtxDeniedMessage(data)
+            : data && "error" in data && data.error
+              ? String(data.error)
+              : `HTTP ${res.status}`;
         push(`× ${err}`);
-        toast.error(err);
+        toast.error(err, {
+          action: {
+            label: "Buy JTX",
+            onClick: () => window.open(JTX_BUY_URL || OPTX_LINKS.jtxBuy, "_blank"),
+          },
+        });
         return;
       }
 

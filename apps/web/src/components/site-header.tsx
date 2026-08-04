@@ -53,7 +53,7 @@ export function SiteHeader() {
           <HeaderLink to="/augments" accent="orange">
             Augments
           </HeaderLink>
-          <HeaderLink to="/exhibit">E𝕏hibit</HeaderLink>
+          <HeaderLink to="/dojo">DOJO</HeaderLink>
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -91,7 +91,7 @@ function HeaderLink({
   children,
   accent,
 }: {
-  to: "/console" | "/exhibit" | "/" | "/augments";
+  to: "/console" | "/dojo" | "/" | "/augments";
   children: ReactNode;
   accent?: "orange";
 }) {

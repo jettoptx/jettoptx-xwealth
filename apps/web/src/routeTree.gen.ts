@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AugmentsRouteImport } from './routes/augments'
 import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as DojoRouteImport } from './routes/dojo'
-import { Route as ExhibitRouteImport } from './routes/exhibit'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MoaRouteImport } from './routes/moa'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -48,11 +47,6 @@ const ConsoleRoute = ConsoleRouteImport.update({
 const DojoRoute = DojoRouteImport.update({
   id: '/dojo',
   path: '/dojo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExhibitRoute = ExhibitRouteImport.update({
-  id: '/exhibit',
-  path: '/exhibit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -136,7 +130,6 @@ export interface FileRoutesByFullPath {
   '/augments': typeof AugmentsRoute
   '/console': typeof ConsoleRoute
   '/dojo': typeof DojoRoute
-  '/exhibit': typeof ExhibitRoute
   '/login': typeof LoginRoute
   '/moa': typeof MoaRoute
   '/settings': typeof SettingsRoute
@@ -158,7 +151,6 @@ export interface FileRoutesByTo {
   '/augments': typeof AugmentsRoute
   '/console': typeof ConsoleRoute
   '/dojo': typeof DojoRoute
-  '/exhibit': typeof ExhibitRoute
   '/login': typeof LoginRoute
   '/moa': typeof MoaRoute
   '/settings': typeof SettingsRoute
@@ -181,7 +173,6 @@ export interface FileRoutesById {
   '/augments': typeof AugmentsRoute
   '/console': typeof ConsoleRoute
   '/dojo': typeof DojoRoute
-  '/exhibit': typeof ExhibitRoute
   '/login': typeof LoginRoute
   '/moa': typeof MoaRoute
   '/settings': typeof SettingsRoute
@@ -205,7 +196,6 @@ export interface FileRouteTypes {
     | '/augments'
     | '/console'
     | '/dojo'
-    | '/exhibit'
     | '/login'
     | '/moa'
     | '/settings'
@@ -227,7 +217,6 @@ export interface FileRouteTypes {
     | '/augments'
     | '/console'
     | '/dojo'
-    | '/exhibit'
     | '/login'
     | '/moa'
     | '/settings'
@@ -249,7 +238,6 @@ export interface FileRouteTypes {
     | '/augments'
     | '/console'
     | '/dojo'
-    | '/exhibit'
     | '/login'
     | '/moa'
     | '/settings'
@@ -272,7 +260,6 @@ export interface RootRouteChildren {
   AugmentsRoute: typeof AugmentsRoute
   ConsoleRoute: typeof ConsoleRoute
   DojoRoute: typeof DojoRoute
-  ExhibitRoute: typeof ExhibitRoute
   LoginRoute: typeof LoginRoute
   MoaRoute: typeof MoaRoute
   SettingsRoute: typeof SettingsRoute
@@ -318,13 +305,6 @@ declare module '@tanstack/react-router' {
       path: '/dojo'
       fullPath: '/dojo'
       preLoaderRoute: typeof DojoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/exhibit': {
-      id: '/exhibit'
-      path: '/exhibit'
-      fullPath: '/exhibit'
-      preLoaderRoute: typeof ExhibitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -440,7 +420,6 @@ const rootRouteChildren: RootRouteChildren = {
   AugmentsRoute: AugmentsRoute,
   ConsoleRoute: ConsoleRoute,
   DojoRoute: DojoRoute,
-  ExhibitRoute: ExhibitRoute,
   LoginRoute: LoginRoute,
   MoaRoute: MoaRoute,
   SettingsRoute: SettingsRoute,
