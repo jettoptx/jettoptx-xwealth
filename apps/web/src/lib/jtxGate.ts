@@ -1,8 +1,13 @@
 /**
- * Programmatic JTX gate — no Privy login required.
+ * Programmatic JTX balance check (public RPC / same-origin proxy).
  * Browser: same-origin /api/solana-rpc (Vite proxy strips Origin → avoids public RPC 403)
  *          + VITE_SOLANA_RPC_URL fallbacks.
  * Agent: scripts/check-jtx-gate.mjs in jettoptx-xwealth (keypair / address).
+ *
+ * UI unlock (DOJO / Augments SKU) must also bind the checked address to the
+ * signed-in user's Privy Solana wallet(s) via usePrivySolanaWallet — do not
+ * unlock tools from an arbitrary pasted foreign pubkey even if balance ≥1.
+ * Server settle paths keep requireJtxGate({ mode: "proven" }) ownership proof.
  */
 
 export const JTX_MINT = 'JTXGnx83s2QZ2MwYkRD1cBKrqQKSdG5oe8vSYW5Zjoe'
@@ -197,4 +202,26 @@ export function defaultWalletFromEnv(): string {
   return (
     (import.meta.env.VITE_SOLANA_WALLET as string | undefined)?.trim() || ''
   )
+}
+
+/** True when `wallet` is one of the caller's owned Solana addresses (exact match). */
+export function isOwnedSolanaWallet(
+  wallet: string,
+  ownedAddresses: readonly string[],
+): boolean {
+  const w = wallet.trim()
+  if (!w || ownedAddresses.length === 0) return false
+  return ownedAddresses.some((a) => a.trim() === w)
+}
+
+/**
+ * UI SKU unlock: on-chain ≥1 JTX AND wallet is Privy-owned.
+ * Public balance reads may still call checkJtxGate alone (CLI / diagnostics).
+ */
+export function jtxUiGatePassed(
+  gate: JtxGateResult | null | undefined,
+  ownedAddresses: readonly string[],
+): boolean {
+  if (!gate?.ok) return false
+  return isOwnedSolanaWallet(gate.wallet, ownedAddresses)
 }
