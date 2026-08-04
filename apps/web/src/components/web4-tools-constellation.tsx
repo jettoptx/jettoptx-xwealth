@@ -309,7 +309,7 @@ export function Web4ToolsConstellation({
                   className="text-fg"
                   style={{
                     fontFamily:
-                      '"Neue Haas Unica", "Neue Haas Unica Fallback", ui-sans-serif, system-ui, sans-serif',
+                      '"D-DIN Expanded", ui-sans-serif, system-ui, sans-serif',
                     fontSize: "12px",
                     fontWeight: 600,
                   }}

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { usePrivy } from "@privy-io/react-auth";
 import {
@@ -11,7 +11,6 @@ import {
   Settings2,
   Sun,
   Unlink,
-  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { RedirectToSignIn } from "@/lib/auth/gates";
@@ -29,7 +28,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { XLogo } from "@/components/brand-icons";
+import {
+  AppleLogo,
+  AuthMethodIcon,
+  GitHubLogo,
+  GoogleLogo,
+  MailLogo,
+  PhoneLogo,
+  WalletLogo,
+  XLogo,
+} from "@/components/brand-icons";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
@@ -95,10 +103,16 @@ function SettingsPage() {
 
   if (isPending) {
     return (
-      <main className="mx-auto max-w-3xl px-3 py-10 sm:px-6 sm:py-16">
-        <div className="h-7 w-36 animate-pulse rounded bg-elevated" />
-        <div className="mt-4 h-40 animate-pulse rounded-xl bg-elevated" />
-        <div className="mt-4 h-56 animate-pulse rounded-xl bg-elevated" />
+      <main className="flex h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] w-full flex-col overflow-hidden">
+        <div className="shrink-0 border-b border-border px-4 py-4 sm:px-6">
+          <div className="h-7 w-36 animate-pulse rounded bg-elevated" />
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden p-4 sm:p-6">
+          <div className="grid h-full gap-4 lg:grid-cols-2">
+            <div className="animate-pulse rounded-xl bg-elevated" />
+            <div className="animate-pulse rounded-xl bg-elevated" />
+          </div>
+        </div>
       </main>
     );
   }
@@ -108,13 +122,13 @@ function SettingsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-5 px-3 py-5 sm:space-y-6 sm:px-6 sm:py-10">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <main className="flex h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] w-full flex-col overflow-hidden bg-bg/40">
+      <header className="flex shrink-0 flex-wrap items-end justify-between gap-3 border-b border-border bg-surface/80 px-4 py-3 backdrop-blur-md sm:px-6">
         <div className="min-w-0">
           <p className="text-[10px] font-medium uppercase tracking-wider text-subtle sm:text-xs">
             Settings
           </p>
-          <h1 className="mt-0.5 flex items-center gap-2 font-display text-xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="mt-0.5 flex items-center gap-2 font-display text-xl font-semibold tracking-tight sm:text-2xl">
             <Settings2 className="size-6 text-augment sm:size-7" aria-hidden />
             Account
           </h1>
@@ -122,15 +136,28 @@ function SettingsPage() {
             Profile, login connections, and appearance for X Wealth.
           </p>
         </div>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/console">Back to Console</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link to="/dojo">DOJO</Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/console">Console</Link>
+          </Button>
+        </div>
       </header>
 
-      <AccountCard />
-      <LoginConnectionsCard />
-      <AppearanceCard />
-      <ExternalLinksCard />
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+        <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
+          <AccountCard />
+          <AppearanceCard />
+          <div className="lg:col-span-2">
+            <LoginConnectionsCard />
+          </div>
+          <div className="lg:col-span-2">
+            <ExternalLinksCard />
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
@@ -626,18 +653,30 @@ function ExternalLinksCard() {
   );
 }
 
+/** Same local brand marks as /login — inline SVGs from brand-icons. */
 function ConnectionIcon({ id }: { id: ConnectionId }) {
-  const wrap = (child: ReactNode) => (
-    <span className="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-bg text-fg">
-      {child}
-    </span>
-  );
-  if (id === "twitter") return wrap(<XLogo className="size-4" />);
-  if (id === "wallet") return wrap(<Wallet className="size-4 text-augment" />);
-  return wrap(
-    <span className="font-mono text-[10px] font-semibold uppercase text-muted">
-      {id.slice(0, 2)}
-    </span>,
+  const icon =
+    id === "twitter" ? (
+      <XLogo className="size-4 text-white" />
+    ) : id === "google" ? (
+      <GoogleLogo className="size-4" />
+    ) : id === "apple" ? (
+      <AppleLogo className="size-4" />
+    ) : id === "github" ? (
+      <GitHubLogo className="size-4" />
+    ) : id === "email" ? (
+      <MailLogo className="size-4" />
+    ) : id === "sms" ? (
+      <PhoneLogo className="size-4" />
+    ) : (
+      <WalletLogo className="size-4" />
+    );
+
+  // Fixed dark plate so Apple/GitHub light fills stay readable in light theme.
+  return (
+    <AuthMethodIcon className="size-9 rounded-md border-white/15 bg-[#141416]">
+      {icon}
+    </AuthMethodIcon>
   );
 }
 

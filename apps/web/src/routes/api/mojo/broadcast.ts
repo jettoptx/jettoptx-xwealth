@@ -1,18 +1,38 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireJtxGate } from "@/lib/auth/jtx-require.server";
 import { sendRawTransactionBase64 } from "@/lib/helius-rpc";
 
 /**
  * Broadcast a Mojo-signed Solana tx (base64) via Helius.
- * Used after sign_tx challenge verifies and returns result.signedTx.
+ * Hard-gated: requires server `X402_LIVE_ENABLED=true`. No client header bypass.
  */
 export const Route = createFileRoute("/api/mojo/broadcast")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const live =
+          typeof process !== "undefined" &&
+          process.env.X402_LIVE_ENABLED === "true";
+        if (!live) {
+          return Response.json(
+            {
+              ok: false,
+              error:
+                "Broadcast disabled — set server X402_LIVE_ENABLED=true (operator LIVE only)",
+            },
+            { status: 403 },
+          );
+        }
+
         const body = (await request.json().catch(() => ({}))) as {
           signedTx?: string;
           signedTxBase64?: string;
+          wallet?: string;
+          solanaWallet?: string;
         };
+
+        const gate = await requireJtxGate(request, body, { mode: "proven" });
+        if (!gate.ok) return gate.response;
         const raw = (body.signedTx || body.signedTxBase64 || "").trim();
         if (!raw) {
           return Response.json(

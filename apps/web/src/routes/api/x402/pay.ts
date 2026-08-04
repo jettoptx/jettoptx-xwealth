@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { jtxCorsHeaders } from "@/lib/auth/jtx-cors";
+import { requireJtxGate } from "@/lib/auth/jtx-require.server";
 import {
   base64ToUtf8,
   buildPaymentRequired,
@@ -19,34 +21,36 @@ export const Route = createFileRoute("/api/x402/pay")({
     handlers: {
       GET: async ({ request }) => handle(request),
       POST: async ({ request }) => handle(request),
-      OPTIONS: async () =>
+      OPTIONS: async ({ request }) =>
         new Response(null, {
           status: 204,
-          headers: corsHeaders(),
+          headers: corsHeaders(request),
         }),
     },
   },
 });
 
-function corsHeaders(): Record<string, string> {
+function corsHeaders(request?: Request): Record<string, string> {
+  if (request) return jtxCorsHeaders(request);
+  // OPTIONS preflight without Origin still advertises methods/headers
   return {
-    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers":
-      "Content-Type, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, X-X402-MODE",
-    "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE",
+      "Content-Type, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, X-X402-MODE, X-Solana-Wallet, X-Wallet, X-JTX-Proof, X-JTX-Message",
+    "Access-Control-Expose-Headers":
+      "PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-JTX-Buy",
+    Vary: "Origin",
   };
 }
 
-function liveEnabled(request: Request): boolean {
-  const env =
-    typeof process !== "undefined" &&
-    (process.env.X402_LIVE_ENABLED === "true" ||
-      process.env.VITE_X402_LIVE_ENABLED === "true");
-  const header = request.headers.get("x-x402-mode")?.toLowerCase() === "live";
-  // Allow live when client explicitly requests it (operator REAL button).
-  // Env flag forces allow even without header.
-  return env || header;
+/**
+ * LIVE settle is server-env only. Client headers / body.mode / VITE_* must NOT
+ * enable mainnet spend — they may request live after the env gate passes.
+ */
+function liveEnabled(): boolean {
+  return (
+    typeof process !== "undefined" && process.env.X402_LIVE_ENABLED === "true"
+  );
 }
 
 async function handle(request: Request): Promise<Response> {
@@ -56,6 +60,8 @@ async function handle(request: Request): Promise<Response> {
     xMoneyUrl?: string;
     amountUsdc?: string;
     mode?: string;
+    wallet?: string;
+    solanaWallet?: string;
   } = {};
 
   if (request.method === "POST") {
@@ -96,10 +102,14 @@ async function handle(request: Request): Promise<Response> {
         "Content-Type": "application/json",
         "PAYMENT-REQUIRED": encoded,
         "Cache-Control": "no-store",
-        ...corsHeaders(),
+        ...corsHeaders(request),
       },
     });
   }
+
+  // Settle: ≥1 JTX + ownership proof (advertise/402 catalog stays public).
+  const gate = await requireJtxGate(request, body, { mode: "proven" });
+  if (!gate.ok) return gate.response;
 
   let envelope = required;
   const prHeader =
@@ -113,16 +123,15 @@ async function handle(request: Request): Promise<Response> {
     }
   }
 
-  const allowLive =
-    liveEnabled(request) || body.mode?.toLowerCase() === "live";
-  // Async: dry-run probes Helius; LIVE may broadcast via sendTransaction
+  const allowLive = liveEnabled();
+  // Client may send mode=live / X-X402-MODE — ignored unless X402_LIVE_ENABLED=true
   const result = await settlePayment(envelope, signature, { allowLive });
   if (!result.success) {
     return new Response(JSON.stringify(result), {
       status: 400,
       headers: {
         "Content-Type": "application/json",
-        ...corsHeaders(),
+        ...corsHeaders(request),
       },
     });
   }
@@ -133,7 +142,7 @@ async function handle(request: Request): Promise<Response> {
       "Content-Type": "application/json",
       "PAYMENT-RESPONSE": utf8ToBase64(JSON.stringify(result)),
       "Cache-Control": "no-store",
-      ...corsHeaders(),
+      ...corsHeaders(request),
     },
   });
 }

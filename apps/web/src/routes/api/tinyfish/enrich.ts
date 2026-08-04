@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireJtxGate } from "@/lib/auth/jtx-require.server";
 import {
   agentProbeXMoney,
   enrichHandleWithTinyFish,
@@ -29,6 +30,21 @@ export const Route = createFileRoute("/api/tinyfish/enrich")({
         });
       },
       POST: async ({ request }) => {
+        let body: {
+          handle?: string;
+          deep?: boolean;
+          wallet?: string;
+          solanaWallet?: string;
+        };
+        try {
+          body = (await request.json()) as typeof body;
+        } catch {
+          return Response.json({ error: "invalid_json" }, { status: 400 });
+        }
+
+        const gate = await requireJtxGate(request, body);
+        if (!gate.ok) return gate.response;
+
         if (!tinyfishConfigured()) {
           return Response.json(
             {
@@ -40,13 +56,6 @@ export const Route = createFileRoute("/api/tinyfish/enrich")({
             },
             { status: 503 },
           );
-        }
-
-        let body: { handle?: string; deep?: boolean };
-        try {
-          body = (await request.json()) as typeof body;
-        } catch {
-          return Response.json({ error: "invalid_json" }, { status: 400 });
         }
 
         const handle = body.handle?.replace(/^@/, "").trim() ?? "";

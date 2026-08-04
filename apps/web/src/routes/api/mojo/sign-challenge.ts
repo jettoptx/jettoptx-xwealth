@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireJtxGate } from "@/lib/auth/jtx-require.server";
 
 /**
  * Proxy → AARON Mojo sign_tx challenge (same rail as jtx.chat login QR).
@@ -18,6 +19,8 @@ export const Route = createFileRoute("/api/mojo/sign-challenge")({
         const body = (await request.json().catch(() => ({}))) as {
           origin?: string;
           privy_did?: string | null;
+          wallet?: string;
+          solanaWallet?: string;
           tx?: {
             amount?: string;
             payTo?: string;
@@ -31,6 +34,10 @@ export const Route = createFileRoute("/api/mojo/sign-challenge")({
             resource?: string | null;
           };
         };
+
+        const gate = await requireJtxGate(request, body, { mode: "proven" });
+        if (!gate.ok) return gate.response;
+
         const origin = body.origin || "xwealth";
         const tx = body.tx;
         if (!tx?.amount || !tx?.payTo) {

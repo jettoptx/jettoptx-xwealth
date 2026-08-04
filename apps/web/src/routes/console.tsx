@@ -51,7 +51,7 @@ function ConsolePage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-medium uppercase tracking-wider text-subtle sm:text-xs">
-            Console
+            Console · account workspace
           </p>
           <h1 className="mt-0.5 truncate font-display text-xl font-semibold tracking-tight sm:text-3xl">
             {user.displayName ?? "Your account"}
@@ -60,8 +60,15 @@ function ConsolePage() {
             {sessionHandle ? (
               <span className="font-mono text-fg">@{sessionHandle}</span>
             ) : (
-              "x402 → X Money"
+              "Session · harnesses · onramp"
             )}
+            {" · "}
+            <Link
+              to="/dojo"
+              className="text-accent underline-offset-2 hover:underline"
+            >
+              DOJO for JTX gate / dry-run
+            </Link>
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -76,6 +83,9 @@ function ConsolePage() {
           <Badge variant="outline" className="text-[10px] sm:text-xs">
             {wiredCount}/4 wired
           </Badge>
+          <Button asChild size="sm" variant="secondary" className="h-7">
+            <Link to="/dojo">DOJO</Link>
+          </Button>
         </div>
       </div>
 

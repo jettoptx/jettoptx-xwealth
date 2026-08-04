@@ -3,6 +3,7 @@ import {
   personToListing,
   type AugmentListing,
 } from "@/lib/augments";
+import { jtxDeniedMessage, jtxFetch } from "@/lib/jtx-api";
 import type { SocialGraphPerson } from "@/lib/x-api";
 
 export type SocialGraphState = {
@@ -63,9 +64,8 @@ export function useSocialGraph(accessToken: string | null): SocialGraphState {
       const probeMoney = opts?.probeMoney ?? false;
 
       try {
-        const res = await fetch("/api/x/social-graph", {
+        const res = await jtxFetch("/api/x/social-graph", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             accessToken,
             limit: 50,
@@ -73,10 +73,15 @@ export function useSocialGraph(accessToken: string | null): SocialGraphState {
           }),
           signal: ac.signal,
         });
-        const json = (await res.json()) as ApiResponse;
+        const json = (await res.json()) as ApiResponse & {
+          buyUrl?: string;
+        };
         if (!res.ok) {
           throw new Error(
-            json.message || json.error || `Social graph failed (${res.status})`,
+            jtxDeniedMessage(json) ||
+              json.message ||
+              json.error ||
+              `Social graph failed (${res.status})`,
           );
         }
         setMe(json.me ? personToListing(json.me) : null);
