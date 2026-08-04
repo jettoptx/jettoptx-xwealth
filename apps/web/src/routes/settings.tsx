@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { usePrivy } from "@privy-io/react-auth";
 import {
+  Check,
   CheckCircle2,
+  Copy,
   ExternalLink,
   Link2,
   Loader2,
@@ -15,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { RedirectToSignIn } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { usePrivySolanaWallet } from "@/lib/auth/use-privy-solana-wallet";
 import { avatarProxyUrl, DEFAULT_AVATAR_URL } from "@/lib/auth/profile-image";
 import { privyEnabled } from "@/lib/auth/privy";
 import { OPTX_LINKS } from "@/lib/optx-links";
@@ -38,7 +41,7 @@ import {
   WalletLogo,
   XLogo,
 } from "@/components/brand-icons";
-import { cn } from "@/lib/utils";
+import { cn, copyText } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -164,6 +167,7 @@ function SettingsPage() {
 
 function AccountCard() {
   const { user } = useCurrentUserState();
+  const { primaryAddress: solanaAddress } = usePrivySolanaWallet();
   if (!user) return null;
 
   const remote = user.profileImageUrl;
@@ -171,6 +175,8 @@ function AccountCard() {
   const direct =
     remote && remote !== DEFAULT_AVATAR_URL ? remote : null;
   const src = proxied ?? direct ?? DEFAULT_AVATAR_URL;
+  // Prefer Privy Solana (JTX gate) over primary Privy wallet (often EVM).
+  const walletAddress = solanaAddress ?? user.walletAddress ?? null;
 
   return (
     <Card>
@@ -211,10 +217,11 @@ function AccountCard() {
           {user.primaryEmail ? (
             <p className="truncate text-sm text-muted">{user.primaryEmail}</p>
           ) : null}
-          {user.walletAddress ? (
-            <p className="truncate font-mono text-xs text-muted">
-              {shortAddr(user.walletAddress)}
-            </p>
+          {walletAddress ? (
+            <CopyableWalletAddress
+              address={walletAddress}
+              label={solanaAddress ? "Solana" : "Wallet"}
+            />
           ) : null}
           <div className="flex flex-wrap gap-1.5 pt-1">
             {user.isDevFallback ? (
@@ -229,6 +236,63 @@ function AccountCard() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** Full pubkey, wrap on narrow panels; click row or Copy button → clipboard + toast. */
+function CopyableWalletAddress({
+  address,
+  label = "Wallet",
+}: {
+  address: string;
+  label?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function onCopy() {
+    try {
+      await copyText(address);
+      setCopied(true);
+      toast.success("Wallet address copied");
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Could not copy address");
+    }
+  }
+
+  return (
+    <div className="pt-0.5">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-subtle">
+        {label}
+      </p>
+      <div className="mt-0.5 flex items-start gap-1.5">
+        <button
+          type="button"
+          onClick={() => void onCopy()}
+          title="Click to copy"
+          className="min-w-0 flex-1 rounded-md text-left outline-none ring-offset-bg focus-visible:ring-2 focus-visible:ring-augment/50"
+        >
+          <span className="block break-all font-mono text-xs leading-relaxed text-muted hover:text-fg">
+            {address}
+          </span>
+        </button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-7 shrink-0 px-2 text-muted"
+          onClick={() => void onCopy()}
+          title="Copy wallet address"
+          aria-label="Copy wallet address"
+        >
+          {copied ? (
+            <Check className="size-3.5 text-augment" aria-hidden />
+          ) : (
+            <Copy className="size-3.5" aria-hidden />
+          )}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -289,9 +353,14 @@ function PrivyConnections() {
     };
 
     for (const def of CONNECTION_DEFS) {
-      const match = accounts.find((a) =>
+      const matches = accounts.filter((a) =>
         (def.accountTypes as readonly string[]).includes(String(a.type ?? "")),
       );
+      // Prefer Solana linked wallet when both EVM + Solana exist.
+      const match =
+        def.id === "wallet"
+          ? (matches.find((a) => a.chainType === "solana") ?? matches[0])
+          : matches[0];
       if (!match) continue;
       byId[def.id] = {
         connected: true,
@@ -325,7 +394,7 @@ function PrivyConnections() {
     if (user?.wallet?.address && !byId.wallet.connected) {
       byId.wallet = {
         connected: true,
-        detail: shortAddr(user.wallet.address),
+        detail: user.wallet.address,
         raw: null,
       };
     }
@@ -489,9 +558,15 @@ function PrivyConnections() {
                       )}
                     </div>
                     {row.detail ? (
-                      <p className="mt-0.5 truncate font-mono text-xs text-muted">
-                        {row.detail}
-                      </p>
+                      def.id === "wallet" ? (
+                        <p className="mt-0.5 break-all font-mono text-xs text-muted">
+                          {row.detail}
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 truncate font-mono text-xs text-muted">
+                          {row.detail}
+                        </p>
+                      )
                     ) : (
                       <p className="mt-0.5 text-xs text-muted">
                         {def.id === "twitter"
@@ -688,9 +763,7 @@ function connectionDetail(id: ConnectionId, a: LinkedSlice): string {
   if (id === "wallet") {
     const chain = a.chainType ? ` · ${a.chainType}` : "";
     const client = a.walletClientType ? ` · ${a.walletClientType}` : "";
-    return a.address
-      ? `${shortAddr(a.address)}${chain}${client}`
-      : "Wallet linked";
+    return a.address ? `${a.address}${chain}${client}` : "Wallet linked";
   }
   if (id === "sms") return a.phoneNumber || a.address || "Phone linked";
   if (id === "email") return a.address || a.email || "Email linked";
@@ -699,9 +772,4 @@ function connectionDetail(id: ConnectionId, a: LinkedSlice): string {
 
 function labelFor(id: ConnectionId): string {
   return CONNECTION_DEFS.find((d) => d.id === id)?.label ?? id;
-}
-
-function shortAddr(addr: string): string {
-  if (addr.length < 12) return addr;
-  return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
 }
