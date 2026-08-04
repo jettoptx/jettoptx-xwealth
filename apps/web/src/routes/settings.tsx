@@ -17,11 +17,11 @@ import {
 import { toast } from "sonner";
 import { RedirectToSignIn } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { usePrivySolanaWallet } from "@/lib/auth/use-privy-solana-wallet";
 import { avatarProxyUrl, DEFAULT_AVATAR_URL } from "@/lib/auth/profile-image";
 import { privyEnabled } from "@/lib/auth/privy";
 import { OPTX_LINKS } from "@/lib/optx-links";
 import { useTheme } from "@/lib/theme";
+import { looksLikeSolanaPubkey } from "@/lib/usdc-payto";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -165,9 +165,79 @@ function SettingsPage() {
   );
 }
 
+/** Prefer linked Privy Solana (JTX gate) over primary wallet (often EVM). */
+function usePreferredWalletAddress(): {
+  address: string | null;
+  isSolana: boolean;
+} {
+  const { user: appUser } = useCurrentUserState();
+  if (!privyEnabled) {
+    const fallback = appUser?.walletAddress ?? null;
+    return {
+      address: fallback,
+      isSolana: looksLikeSolanaPubkey(fallback),
+    };
+  }
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- privyEnabled is a build-time constant
+  return usePreferredWalletAddressPrivy(appUser?.walletAddress ?? null);
+}
+
+function usePreferredWalletAddressPrivy(fallbackAddress: string | null): {
+  address: string | null;
+  isSolana: boolean;
+} {
+  const { user: privyUser } = usePrivy();
+
+  return useMemo(() => {
+    if (!privyUser) {
+      return {
+        address: fallbackAddress,
+        isSolana: looksLikeSolanaPubkey(fallbackAddress),
+      };
+    }
+
+    const primary = privyUser.wallet as
+      | { address?: string; chainType?: string }
+      | undefined;
+    if (primary?.chainType === "solana" && primary.address) {
+      return { address: primary.address, isSolana: true };
+    }
+    if (
+      primary?.chainType == null &&
+      looksLikeSolanaPubkey(primary?.address)
+    ) {
+      return { address: primary!.address!, isSolana: true };
+    }
+
+    for (const account of privyUser.linkedAccounts ?? []) {
+      const any = account as {
+        type?: string;
+        address?: string;
+        chainType?: string;
+      };
+      if (any.chainType === "solana" && any.address) {
+        return { address: any.address, isSolana: true };
+      }
+      if (any.chainType && any.chainType !== "solana") continue;
+      if (
+        (any.type === "wallet" || any.type === "smart_wallet") &&
+        looksLikeSolanaPubkey(any.address)
+      ) {
+        return { address: any.address!, isSolana: true };
+      }
+    }
+
+    const fallback = primary?.address ?? fallbackAddress;
+    return {
+      address: fallback,
+      isSolana: looksLikeSolanaPubkey(fallback),
+    };
+  }, [fallbackAddress, privyUser]);
+}
+
 function AccountCard() {
   const { user } = useCurrentUserState();
-  const { primaryAddress: solanaAddress } = usePrivySolanaWallet();
+  const { address: walletAddress, isSolana } = usePreferredWalletAddress();
   if (!user) return null;
 
   const remote = user.profileImageUrl;
@@ -175,8 +245,6 @@ function AccountCard() {
   const direct =
     remote && remote !== DEFAULT_AVATAR_URL ? remote : null;
   const src = proxied ?? direct ?? DEFAULT_AVATAR_URL;
-  // Prefer Privy Solana (JTX gate) over primary Privy wallet (often EVM).
-  const walletAddress = solanaAddress ?? user.walletAddress ?? null;
 
   return (
     <Card>
@@ -220,7 +288,7 @@ function AccountCard() {
           {walletAddress ? (
             <CopyableWalletAddress
               address={walletAddress}
-              label={solanaAddress ? "Solana" : "Wallet"}
+              label={isSolana ? "Solana" : "Wallet"}
             />
           ) : null}
           <div className="flex flex-wrap gap-1.5 pt-1">
