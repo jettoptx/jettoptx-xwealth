@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import {
   BookOpen,
   Bot,
@@ -114,6 +114,9 @@ export const Route = createFileRoute("/augments")({
   validateSearch: (search: Record<string, unknown>) => ({
     embed: search.embed === "1" || search.embed === 1 ? "1" : undefined,
   }),
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: "/paylinks", search: { embed: search.embed } });
+  },
   component: AugmentsPage,
 });
 

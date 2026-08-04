@@ -25,8 +25,12 @@ export const OPTX_LINKS = {
   wealth: "https://xwealth.space",
   moa: "https://xwealth.space/moa",
   moaDocs: `${OPTX_DOCS}/dojo/moa`,
-  augments: "https://xwealth.space/augments",
-  augmentsPath: "/augments",
+  /** Pay links surface (canonical — /augments redirects here) */
+  paylinks: "https://xwealth.space/paylinks",
+  paylinksPath: "/paylinks",
+  /** Legacy augments alias — kept for backward compat, redirects to /paylinks */
+  augments: "https://xwealth.space/paylinks",
+  augmentsPath: "/paylinks",
   moaPath: "/moa",
   consolePath: "/console",
   x402Pay: "https://xwealth.space/api/x402/pay",

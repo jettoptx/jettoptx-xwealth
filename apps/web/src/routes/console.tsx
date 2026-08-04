@@ -143,8 +143,8 @@ function ConsolePage() {
               </a>
             </Button>
             <Button asChild size="sm" variant="ghost">
-              <Link to="/augments" search={{ embed: undefined }}>
-                Back to Augments map
+              <Link to="/paylinks" search={{ embed: undefined }}>
+                Pay Links
               </Link>
             </Button>
           </CardContent>

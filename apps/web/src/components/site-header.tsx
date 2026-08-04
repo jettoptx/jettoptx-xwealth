@@ -50,8 +50,8 @@ export function SiteHeader() {
 
         <nav className="ml-2 hidden items-center gap-0.5 sm:flex">
           <HeaderLink to="/console">Console</HeaderLink>
-          <HeaderLink to="/augments" accent="orange">
-            Augments
+          <HeaderLink to="/paylinks" accent="orange">
+            Pay Links
           </HeaderLink>
           <HeaderLink to="/dojo">DOJO</HeaderLink>
         </nav>
@@ -91,7 +91,7 @@ function HeaderLink({
   children,
   accent,
 }: {
-  to: "/console" | "/dojo" | "/" | "/augments";
+  to: "/console" | "/dojo" | "/" | "/paylinks";
   children: ReactNode;
   accent?: "orange";
 }) {
