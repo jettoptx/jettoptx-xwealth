@@ -62,6 +62,36 @@ DEFAULT_MARKETS: list[dict[str, Any]] = [
         "liquidity_usd": 5_000,
         "note": "prediction-market stub for Wealth-08 MiroShark sims",
     },
+    {
+        "id": "paper-spcx-usdc",
+        "pair": "SPCX/USDC",
+        "venue": "jtx-paper",
+        "bid": 116.5,
+        "ask": 116.9,
+        "mid": 116.7,
+        "liquidity_usd": 250_000,
+        "note": "synthetic SPCX equity book stub; re-mark from desk before LIVE",
+    },
+    {
+        "id": "paper-wxrp-usdc",
+        "pair": "WXRP/USDC",
+        "venue": "jtx-paper",
+        "bid": 1.07,
+        "ask": 1.08,
+        "mid": 1.075,
+        "liquidity_usd": 500_000,
+        "note": "synthetic Hex wXRP stub",
+    },
+    {
+        "id": "paper-spcx-sol",
+        "pair": "SPCX/SOL",
+        "venue": "jtx-paper",
+        "bid": 1.58,
+        "ask": 1.60,
+        "mid": 1.59,
+        "liquidity_usd": 100_000,
+        "note": "synthetic ratio stub A1",
+    },
 ]
 
 DATA_DIR = Path(os.environ.get("JTX_PAPER_DATA_DIR", Path(__file__).resolve().parent / "data"))
@@ -87,7 +117,8 @@ def ensure_state() -> dict[str, Any]:
         }
         _write(state)
         return state
-    with STATE_PATH.open("r", encoding="utf-8") as f:
+    # utf-8-sig strips a leading BOM (PowerShell Set-Content often writes one)
+    with STATE_PATH.open("r", encoding="utf-8-sig") as f:
         return json.load(f)
 
 
@@ -95,7 +126,8 @@ def _write(state: dict[str, Any]) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     state["updated_at"] = _now()
     tmp = STATE_PATH.with_suffix(".tmp")
-    with tmp.open("w", encoding="utf-8") as f:
+    # Write UTF-8 without BOM so MCP/json.loads never chokes
+    with tmp.open("w", encoding="utf-8", newline="\n") as f:
         json.dump(state, f, indent=2, sort_keys=False)
         f.write("\n")
     tmp.replace(STATE_PATH)

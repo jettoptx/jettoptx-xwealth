@@ -305,9 +305,36 @@ def jtx_uw_ticker_flow(ticker: str) -> str:
 
 
 @mcp.tool()
-def jtx_uw_news(limit: int = 10) -> str:
-    """Unusual Whales news headlines. Paper signal only."""
-    return _json(uw.news_headlines(limit=limit))
+def jtx_uw_news(
+    limit: int = 10,
+    command: str = "headlines",
+    ticker: str = "",
+) -> str:
+    """Unusual Whales news headlines. Paper signal only.
+
+    Prefer this tool over official unusualwhales ``uw_news``.
+
+    Args:
+        limit: max headlines (default 10)
+        command: must be ``headlines`` (accepted for model/schema compatibility
+            with @unusualwhales/mcp ``uw_news`` which requires command=headlines)
+        ticker: optional equity ticker filter (empty = market-wide)
+    """
+    cmd = (command or "headlines").strip().lower()
+    if cmd and cmd not in ("headlines", "news", "headline"):
+        return _json(
+            {
+                "ok": False,
+                "error": "invalid_command",
+                "message": "jtx_uw_news only supports command='headlines'",
+                "got": command,
+            }
+        )
+    # REST client currently market-wide; ticker reserved for future filter
+    result = uw.news_headlines(limit=limit)
+    if ticker and isinstance(result, dict):
+        result = {**result, "ticker_filter": ticker.upper(), "note": "ticker filter best-effort; REST may be market-wide"}
+    return _json(result)
 
 
 @mcp.tool()
