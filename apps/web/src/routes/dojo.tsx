@@ -60,6 +60,7 @@ function DojoHubPage() {
     liveEnabled: boolean;
     heliusConfigured: boolean;
     rpc: string;
+    joeBuzzNotifyConfigured?: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -361,12 +362,23 @@ function DojoHubPage() {
             <p className="pb-2 text-center font-mono text-[10px] text-subtle">
               /dojo · JTX gate · PayLinkPanel · X402Panel ·{" "}
               {x402Status
-                ? `LIVE ${x402Status.liveEnabled ? "on" : "off"} · ${
+                ? `LIVE ${x402Status.liveEnabled ? "on" : "off"} · Buzz ${
+                    x402Status.joeBuzzNotifyConfigured ? "DM" : "harness"
+                  } · ${
                     x402Status.heliusConfigured
                       ? x402Status.rpc
                       : "no Helius"
                   }`
                 : "LIVE status…"}
+              {" · "}
+              <a
+                href={OPTX_LINKS.buzzChannel}
+                target="_blank"
+                rel="noreferrer"
+                className="underline-offset-2 hover:underline"
+              >
+                Buzz
+              </a>
               {" · "}
               <a
                 href={OPTX_LINKS.cloudflareWallet}

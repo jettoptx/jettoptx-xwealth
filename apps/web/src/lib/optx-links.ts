@@ -47,6 +47,12 @@ export const OPTX_LINKS = {
   docs: OPTX_DOCS,
   docsRoot: OPTX_DOCS,
   jettchat: "https://www.jettoptx.chat/",
+  /**
+   * Buzz channel (JettChat / JOE agent harness chat).
+   * x402 LIVE sign challenges notify here when JOE_BUZZ_WEBHOOK_URL is set.
+   */
+  buzzChannel: "https://www.jettoptx.chat/",
+  buzzChannelLabel: "Buzz · JettChat",
   /** Full chat account (Usage / Wallet / Security / Connectors) */
   jettchatSettings: "https://www.jettoptx.chat/settings",
   jettchatSettingsWallet: "https://www.jettoptx.chat/settings?tab=Wallet",
@@ -64,7 +70,7 @@ export const OPTX_LINKS = {
   settingsPath: "/settings",
   /**
    * Cloudflare Wallets agent identity (claim / Monetization Gateway rail).
-   * Not a Solana USDC settle destination today — Privy + X Money is the LIVE path.
+   * Not a Solana USDC settle destination today — LIVE settle = JOE/harness sign + X Money.
    */
   cloudflareWallet: "https://augment.cloudflare.pay",
   cloudflareWalletHandle: "augment.cloudflare.pay",

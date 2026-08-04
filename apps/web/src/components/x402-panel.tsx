@@ -6,8 +6,11 @@ import {
   useWallets,
 } from "@privy-io/react-auth/solana";
 import {
+  Copy,
+  ExternalLink,
   FlaskConical,
   Loader2,
+  MessageSquare,
   ShieldAlert,
   Smartphone,
   Zap,
@@ -26,20 +29,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   buildPaymentPayload,
-  buildPaymentRequired,
-  encodePaymentRequired,
   encodePaymentSignature,
   USDC_MINT_SOLANA,
   type X402SettleResult,
 } from "@/lib/x402";
-import {
-  buildX402SignMessage,
-  bytesToBase58,
-  sleep,
-} from "@/lib/privy-pay-sign";
+import { bytesToBase58, sleep } from "@/lib/privy-pay-sign";
 import { useWealthStore } from "@/lib/store";
 import { privyEnabled } from "@/lib/auth/privy";
-import { cn } from "@/lib/utils";
+import { cn, copyText } from "@/lib/utils";
 import { MojoSignQrModal } from "@/components/mojo-sign-qr";
 import type { SignTxMeta } from "@/lib/mojo-sign-challenge";
 import {
@@ -50,6 +47,12 @@ import {
 import { jtxDeniedMessage, jtxHeaders, JTX_BUY_URL } from "@/lib/jtx-api";
 import { buildJtxProofHeaders } from "@/lib/jtx-proof";
 import { OPTX_LINKS } from "@/lib/optx-links";
+import {
+  createJoeSignChallenge,
+  pollJoeSignChallenge,
+  submitJoeSignChallenge,
+  type JoeSignChallenge,
+} from "@/lib/x402-sign-challenge";
 
 type PayMode = "dry" | "live";
 
@@ -57,6 +60,8 @@ type X402RailStatus = {
   liveEnabled: boolean;
   heliusConfigured: boolean;
   rpc: string;
+  joeBuzzNotifyConfigured?: boolean;
+  primaryLiveSignPath?: string;
   cloudflareWallet?: {
     handle: string;
     url: string;
@@ -81,11 +86,13 @@ export function X402Panel() {
   const [mojoOpen, setMojoOpen] = useState(false);
   const [mojoSig, setMojoSig] = useState<string | null>(null);
   const [mojoChainSig, setMojoChainSig] = useState<string | null>(null);
-  /** Solana USDC destination for Mojo QR (not X Money URL). */
   const [solPayTo, setSolPayTo] = useState("");
   const [railStatus, setRailStatus] = useState<X402RailStatus | null>(null);
+  const [challenge, setChallenge] = useState<JoeSignChallenge | null>(null);
+  const [pasteSig, setPasteSig] = useState("");
+  const [showPrivyFallback, setShowPrivyFallback] = useState(false);
+  const [showMojoAdvanced, setShowMojoAdvanced] = useState(false);
 
-  // Privy — identity from main package; Solana wallets from /solana
   const { ready, authenticated } = usePrivy();
   const { login } = useLogin();
   const { wallets } = useWallets();
@@ -103,7 +110,7 @@ export function X402Panel() {
         const data = (await res.json()) as X402RailStatus;
         if (!cancelled) setRailStatus(data);
       } catch {
-        /* footer / badge stay unknown */
+        /* ignore */
       }
     })();
     return () => {
@@ -111,12 +118,45 @@ export function X402Panel() {
     };
   }, []);
 
+  // Poll JOE / harness challenge until verified
+  useEffect(() => {
+    if (!challenge || challenge.status === "verified") return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const p = await pollJoeSignChallenge(challenge.cid);
+        if (cancelled) return;
+        if (p.status === "verified" && p.signature) {
+          push(`← JOE/harness approved · ${p.approvedVia ?? "sign"}`);
+          setChallenge((c) => (c ? { ...c, status: "verified" } : c));
+          await settleWithSignature({
+            signature: p.signature,
+            fromWallet: p.fromWallet || walletStore || "joe-harness",
+            paymentRequired: challenge.paymentRequired,
+            approvedVia: p.approvedVia || "harness",
+          });
+        } else if (p.status === "expired") {
+          push("× Challenge expired — ask JOE again");
+          setChallenge((c) => (c ? { ...c, status: "expired" } : c));
+        }
+      } catch {
+        /* keep polling */
+      }
+    };
+    const id = window.setInterval(() => void tick(), 2500);
+    void tick();
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- poll only on cid
+  }, [challenge?.cid, challenge?.status]);
+
   const solDest = resolveSolanaPayTo({
     destination: solPayTo,
     payTo: solPayTo,
   });
 
-  /** Mojo QR spend meta — phone builds + signs USDC transfer to solDest. */
   const mojoTx: SignTxMeta | null = useMemo(() => {
     if (!money || !solDest) return null;
     return {
@@ -135,205 +175,45 @@ export function X402Panel() {
     };
   }, [money, amount, solDest]);
 
-  const liveReady =
-    mode === "dry" ||
-    (liveConfirm &&
-      (!privyEnabled || (ready && authenticated)));
-
   function push(line: string) {
-    setLog((L) => [line, ...L].slice(0, 14));
+    setLog((L) => [line, ...L].slice(0, 16));
   }
 
-  /** Ensure a Privy Solana wallet exists and sign the x402 live message. */
-  async function signWithPrivy(message: string): Promise<{
+  async function settleWithSignature(opts: {
     signature: string;
-    from: string;
-  }> {
-    if (!privyEnabled) {
-      throw new Error("Privy is not configured — cannot REAL-sign");
-    }
-    if (!ready) {
-      throw new Error("Privy still loading — wait a moment and retry");
-    }
-    if (!authenticated) {
-      throw new Error("Sign in with Privy before REAL pay");
-    }
-
-    let wallet = walletsRef.current[0];
-    if (!wallet) {
-      push("→ Privy Solana: creating embedded wallet…");
-      try {
-        const created = await createWallet();
-        const want = created.wallet?.address;
-        for (let i = 0; i < 25; i++) {
-          await sleep(200);
-          const list = walletsRef.current;
-          wallet =
-            (want
-              ? list.find((w) => w.address === want)
-              : undefined) || list[0];
-          if (wallet) break;
-        }
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (/authenticated/i.test(msg)) {
-          throw new Error(
-            "Privy session required before creating a Solana wallet — sign in, then retry REAL",
-          );
-        }
-        if (/already has/i.test(msg)) {
-          // Wallet exists but hook list not ready yet — wait
-          for (let i = 0; i < 25; i++) {
-            await sleep(200);
-            wallet = walletsRef.current[0];
-            if (wallet) break;
-          }
-        } else {
-          throw e;
-        }
-      }
-    }
-
-    if (!wallet) {
-      throw new Error(
-        "Solana wallet not ready after create — wait a second and retry Sign & Pay",
-      );
-    }
-
-    const address = wallet.address;
-    push(`→ Privy Solana ${address.slice(0, 6)}…${address.slice(-4)}`);
-
-    const encoded = new TextEncoder().encode(message);
-    const { signature: sigBytes } = await signMessage({
-      message: encoded,
-      wallet,
-    });
-    const signature = bytesToBase58(sigBytes);
-
-    if (!walletStore) {
-      setSolanaWallet(address);
-    }
-
-    return { signature, from: address };
-  }
-
-  async function runPay() {
-    if (!money) {
-      toast.error("Link X Money first");
-      return;
-    }
-    if (mode === "live" && !liveConfirm) {
-      toast.error("Confirm LIVE before running REAL pay");
-      return;
-    }
-    if (mode === "live" && privyEnabled && (!ready || !authenticated)) {
-      toast.error("Sign in with Privy before REAL pay");
-      login();
-      return;
-    }
-
+    fromWallet: string;
+    paymentRequired: string;
+    approvedVia: string;
+  }) {
+    if (!money) return;
     setBusy(true);
-    setLast(null);
-    const isLive = mode === "live";
-
     try {
       const resource =
         typeof window !== "undefined"
           ? `${window.location.origin}/api/x402/pay`
           : "/api/x402/pay";
 
-      // 1) Probe 402
-      const probe = await fetch("/api/x402/pay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          xHandle: money.handle,
-          xMoneyUrl: money.transferUrl,
-          amountUsdc: amount,
-          mode: isLive ? "live" : "dry",
-        }),
-      });
-
-      const prFromProbe =
-        probe.headers.get("PAYMENT-REQUIRED") ||
-        probe.headers.get("payment-required");
-
-      const required = buildPaymentRequired({
+      const payload = buildPaymentPayload({
         amountUsdc: amount,
         xHandle: money.handle,
         xMoneyUrl: money.transferUrl,
         resource,
+        fromWallet: opts.fromWallet,
+        dryRun: false,
       });
-      let prHeader = encodePaymentRequired(required);
+      payload.payload.signature = opts.signature;
+      const sigBody = encodePaymentSignature(payload);
 
-      if (probe.status === 402) {
-        push(`← 402 Payment Required · ${amount} USDC${isLive ? " · LIVE" : ""}`);
-        if (prFromProbe) {
-          prHeader = prFromProbe;
-          push(`PAYMENT-REQUIRED: ${prHeader.slice(0, 48)}…`);
-        }
-      } else {
-        push(`← 402 envelope · ${amount} USDC`);
-      }
-
-      let fromWallet =
-        walletStore || (isLive ? "agent-harness-live" : "agent-harness-sim");
-      let sigBody: string;
-
-      if (isLive && privyEnabled) {
-        const msg = buildX402SignMessage({
-          amountUsdc: amount,
-          xHandle: money.handle,
-          xMoneyUrl: money.transferUrl,
-          resource,
-        });
-        const signed = await signWithPrivy(msg);
-        fromWallet = signed.from;
-        push(`→ PAYMENT-SIGNATURE (Privy Solana) ${signed.signature.slice(0, 18)}…`);
-
-        const payload = buildPaymentPayload({
-          amountUsdc: amount,
-          xHandle: money.handle,
-          xMoneyUrl: money.transferUrl,
-          resource,
-          fromWallet,
-          dryRun: false,
-        });
-        payload.payload.signature = signed.signature;
-        sigBody = encodePaymentSignature(payload);
-      } else {
-        const payload = buildPaymentPayload({
-          amountUsdc: amount,
-          xHandle: money.handle,
-          xMoneyUrl: money.transferUrl,
-          resource,
-          fromWallet,
-          dryRun: !isLive,
-        });
-        sigBody = encodePaymentSignature(payload);
-        push(
-          isLive
-            ? "→ PAYMENT-SIGNATURE (LIVE intent)"
-            : "→ PAYMENT-SIGNATURE (dry-run)",
-        );
-      }
-
-      // 3) Settle — server requires ≥1 JTX + ownership proof (Phantom)
-      const proof = await buildJtxProofHeaders(walletStore || fromWallet);
+      const proof = await buildJtxProofHeaders(walletStore || opts.fromWallet);
       if (!proof) {
         const err =
-          "Connect Phantom (or a Solana wallet) to prove ownership before settle. Paste-pubkey alone is not enough for settle/mojo.";
+          "Connect Phantom (or a Solana wallet) to prove JTX ownership before settle.";
         push(`× ${err}`);
-        toast.error(err, {
-          action: {
-            label: "Buy JTX",
-            onClick: () =>
-              window.open(JTX_BUY_URL || OPTX_LINKS.jtxBuy, "_blank"),
-          },
-        });
+        toast.error(err);
         return;
       }
 
+      push(`→ settle LIVE · via ${opts.approvedVia}`);
       const res = await fetch("/api/x402/pay", {
         method: "POST",
         headers: {
@@ -341,10 +221,10 @@ export function X402Panel() {
             {
               "Content-Type": "application/json",
               "PAYMENT-SIGNATURE": sigBody,
-              "PAYMENT-REQUIRED": prHeader,
+              "PAYMENT-REQUIRED": opts.paymentRequired,
               "X-JTX-Proof": proof["X-JTX-Proof"],
               "X-JTX-Message": proof["X-JTX-Message"],
-              ...(isLive ? { "X-X402-MODE": "live" } : {}),
+              "X-X402-MODE": "live",
             },
             proof["X-Solana-Wallet"],
           ),
@@ -353,7 +233,7 @@ export function X402Panel() {
           xHandle: money.handle,
           xMoneyUrl: money.transferUrl,
           amountUsdc: amount,
-          mode: isLive ? "live" : "dry",
+          mode: "live",
           wallet: proof["X-Solana-Wallet"],
         }),
       });
@@ -370,13 +250,7 @@ export function X402Panel() {
               ? String(data.error)
               : `HTTP ${res.status}`;
         push(`× ${err}`);
-        toast.error(err, {
-          action: {
-            label: "Buy JTX",
-            onClick: () =>
-              window.open(JTX_BUY_URL || OPTX_LINKS.jtxBuy, "_blank"),
-          },
-        });
+        toast.error(err);
         return;
       }
 
@@ -387,38 +261,251 @@ export function X402Panel() {
         xHandle: data.xHandle,
         transaction: data.transaction,
         settledAt: data.settledAt,
-        harness: isLive ? "live" : "manual",
+        harness: "live",
       });
 
-      if (data.rpc) {
+      const payUrl = data.actionUrl || money.transferUrl;
+      push(`✓ LIVE settled · opening X Money…`);
+      push(`→ ${payUrl}`);
+      const win = window.open(payUrl, "_blank", "noopener,noreferrer");
+      if (!win) toast.message("Popup blocked — use Open pay link below");
+      else toast.success("JOE/harness signed — complete pay on X Money");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Settle failed";
+      push(`× ${msg}`);
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function askJoeSignChallenge() {
+    if (!money) {
+      toast.error("Link X Money first");
+      return;
+    }
+    if (!liveConfirm) {
+      toast.error("Confirm LIVE before asking JOE");
+      return;
+    }
+    setBusy(true);
+    setLast(null);
+    setChallenge(null);
+    try {
+      const resource =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/api/x402/pay`
+          : "/api/x402/pay";
+      push(`→ JOE: mint x402 sign challenge · ${amount} USDC`);
+      const ch = await createJoeSignChallenge({
+        amountUsdc: amount,
+        xHandle: money.handle,
+        xMoneyUrl: money.transferUrl,
+        resource,
+      });
+      setChallenge(ch);
+      if (ch.buzzNotified) {
+        push(`← Buzz notified · cid ${ch.cid.slice(0, 18)}…`);
+        toast.success("JOE notified Buzz — approve the sign challenge");
+      } else {
         push(
-          `↗ RPC ${data.rpc.provider}${
-            data.rpc.slot != null ? ` · slot ${data.rpc.slot}` : ""
-          }${data.rpc.onChain ? " · on-chain" : ""}`,
+          `← Challenge ready · Buzz webhook off — use harness (cid ${ch.cid.slice(0, 14)}…)`,
         );
-        if (data.rpc.chainSignature) {
-          push(`✓ chain sig ${data.rpc.chainSignature.slice(0, 16)}…`);
+        toast.message(
+          "Buzz DM not wired — copy harness skill or open JettChat. Set JOE_BUZZ_WEBHOOK_URL for auto DM.",
+        );
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Challenge failed";
+      push(`× ${msg}`);
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitPastedSignature() {
+    if (!challenge || !pasteSig.trim()) {
+      toast.error("Paste a signature from JOE/harness first");
+      return;
+    }
+    setBusy(true);
+    try {
+      push("→ submit harness/paste signature…");
+      const p = await submitJoeSignChallenge({
+        cid: challenge.cid,
+        signature: pasteSig.trim(),
+        fromWallet: walletStore || undefined,
+        approvedVia: "paste",
+      });
+      if (p.status !== "verified" || !p.signature) {
+        throw new Error("Submit did not verify");
+      }
+      setChallenge((c) => (c ? { ...c, status: "verified" } : c));
+      await settleWithSignature({
+        signature: p.signature,
+        fromWallet: p.fromWallet || walletStore || "joe-harness",
+        paymentRequired: challenge.paymentRequired,
+        approvedVia: "paste",
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Submit failed";
+      push(`× ${msg}`);
+      toast.error(msg);
+      setBusy(false);
+    }
+  }
+
+  async function signWithPrivyFallback() {
+    if (!money || !challenge) return;
+    if (!privyEnabled || !ready || !authenticated) {
+      toast.error("Sign in with Privy for wallet fallback");
+      login();
+      return;
+    }
+    setBusy(true);
+    try {
+      let wallet = walletsRef.current[0];
+      if (!wallet) {
+        push("→ Privy Solana fallback: creating wallet…");
+        const created = await createWallet();
+        const want = created.wallet?.address;
+        for (let i = 0; i < 25; i++) {
+          await sleep(200);
+          const list = walletsRef.current;
+          wallet =
+            (want ? list.find((w) => w.address === want) : undefined) ||
+            list[0];
+          if (wallet) break;
         }
+      }
+      if (!wallet) throw new Error("Solana wallet not ready");
+      const encoded = new TextEncoder().encode(challenge.message);
+      const { signature: sigBytes } = await signMessage({
+        message: encoded,
+        wallet,
+      });
+      const signature = bytesToBase58(sigBytes);
+      push(`→ Privy fallback signed ${wallet.address.slice(0, 6)}…`);
+      await submitJoeSignChallenge({
+        cid: challenge.cid,
+        signature,
+        fromWallet: wallet.address,
+        approvedVia: "privy-fallback",
+      });
+      if (!walletStore) setSolanaWallet(wallet.address);
+      await settleWithSignature({
+        signature,
+        fromWallet: wallet.address,
+        paymentRequired: challenge.paymentRequired,
+        approvedVia: "privy-fallback",
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Privy sign failed";
+      push(`× ${msg}`);
+      toast.error(msg);
+      setBusy(false);
+    }
+  }
+
+  async function runDryPay() {
+    if (!money) {
+      toast.error("Link X Money first");
+      return;
+    }
+    setBusy(true);
+    setLast(null);
+    try {
+      const resource =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/api/x402/pay`
+          : "/api/x402/pay";
+      const fromWallet = walletStore || "agent-harness-sim";
+      const payload = buildPaymentPayload({
+        amountUsdc: amount,
+        xHandle: money.handle,
+        xMoneyUrl: money.transferUrl,
+        resource,
+        fromWallet,
+        dryRun: true,
+      });
+      const sigBody = encodePaymentSignature(payload);
+      push("→ PAYMENT-SIGNATURE (dry-run)");
+
+      const probe = await fetch("/api/x402/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          xHandle: money.handle,
+          xMoneyUrl: money.transferUrl,
+          amountUsdc: amount,
+          mode: "dry",
+        }),
+      });
+      const prHeader =
+        probe.headers.get("PAYMENT-REQUIRED") ||
+        probe.headers.get("payment-required") ||
+        "";
+      if (probe.status === 402) {
+        push(`← 402 Payment Required · ${amount} USDC`);
       }
 
-      if (isLive) {
-        const payUrl = data.actionUrl || money.transferUrl;
-        push(
-          data.rpc?.onChain
-            ? `✓ Broadcast via Helius · opening Pay now…`
-            : `✓ Privy signed · Helius rail ready · opening Pay now…`,
-        );
-        push(`→ ${payUrl}`);
-        const win = window.open(payUrl, "_blank", "noopener,noreferrer");
-        if (!win) {
-          toast.message("Popup blocked — use Open pay link below");
-        } else {
-          toast.success("Signed with Privy — complete pay on X Money");
-        }
-      } else {
-        push(`✓ Dry-run settled · ${data.transaction.slice(0, 18)}…`);
-        toast.success("x402 dry-run complete");
+      const proof = await buildJtxProofHeaders(fromWallet);
+      if (!proof) {
+        // Dry-run still wants proof on settle — show clear error
+        const err =
+          "Connect Phantom to prove ownership before dry-run settle.";
+        push(`× ${err}`);
+        toast.error(err);
+        return;
       }
+
+      const res = await fetch("/api/x402/pay", {
+        method: "POST",
+        headers: {
+          ...jtxHeaders(
+            {
+              "Content-Type": "application/json",
+              "PAYMENT-SIGNATURE": sigBody,
+              ...(prHeader ? { "PAYMENT-REQUIRED": prHeader } : {}),
+              "X-JTX-Proof": proof["X-JTX-Proof"],
+              "X-JTX-Message": proof["X-JTX-Message"],
+            },
+            proof["X-Solana-Wallet"],
+          ),
+        },
+        body: JSON.stringify({
+          xHandle: money.handle,
+          xMoneyUrl: money.transferUrl,
+          amountUsdc: amount,
+          mode: "dry",
+          wallet: proof["X-Solana-Wallet"],
+        }),
+      });
+      const data = (await res.json()) as
+        | X402SettleResult
+        | { success: false; error: string };
+
+      if (!res.ok || !("success" in data) || !data.success) {
+        const err =
+          data && "error" in data && data.error
+            ? String(data.error)
+            : `HTTP ${res.status}`;
+        push(`× ${err}`);
+        toast.error(err);
+        return;
+      }
+      setLast(data);
+      addReceipt({
+        amount: data.amount,
+        asset: data.asset,
+        xHandle: data.xHandle,
+        transaction: data.transaction,
+        settledAt: data.settledAt,
+        harness: "manual",
+      });
+      push(`✓ Dry-run settled · ${data.transaction.slice(0, 18)}…`);
+      toast.success("x402 dry-run complete");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Request failed";
       push(`× ${msg}`);
@@ -427,6 +514,8 @@ export function X402Panel() {
       setBusy(false);
     }
   }
+
+  const liveReady = mode === "dry" || liveConfirm;
 
   return (
     <Card>
@@ -438,9 +527,10 @@ export function X402Panel() {
               x402 agent pay
             </CardTitle>
             <CardDescription className="mt-1">
-              Dry-run simulates the agent path. REAL asks Privy to sign the
-              payment message with a Solana wallet, then opens X Money to Pay
-              now.
+              Dry-run simulates the agent path. REAL asks{" "}
+              <span className="text-fg">JOE</span> to DM a sign challenge in{" "}
+              <span className="text-fg">Buzz / harness</span>, then opens X
+              Money after approve.
             </CardDescription>
           </div>
           <Badge
@@ -450,7 +540,7 @@ export function X402Panel() {
               mode === "live" && "border-amber-500/50 text-amber-400",
             )}
           >
-            {mode === "live" ? "REAL · Privy Solana" : "dry-run"}
+            {mode === "live" ? "REAL · JOE / harness" : "dry-run"}
           </Badge>
         </div>
       </CardHeader>
@@ -464,6 +554,7 @@ export function X402Panel() {
             onClick={() => {
               setMode("dry");
               setLiveConfirm(false);
+              setChallenge(null);
             }}
           >
             Dry-run
@@ -494,30 +585,21 @@ export function X402Panel() {
             <span>
               <span className="font-medium text-amber-200">I confirm LIVE</span>
               <span className="mt-0.5 block text-xs text-muted">
-                Privy will prompt your Solana wallet to sign the x402 payment
-                message, then a new window opens on{" "}
-                <span className="font-mono text-fg">x.com/i/money/…</span> for
-                Pay now. Wallet is only created if you don’t have one yet (not
-                on login).
+                JOE will create an x402 sign challenge and notify you in{" "}
+                <span className="font-mono text-fg">Buzz (JettChat)</span> when
+                the webhook is configured — otherwise approve via the harness
+                skill below. MOJO QR is not required.
               </span>
             </span>
           </label>
         )}
 
-        {mode === "live" && privyEnabled && ready && !authenticated && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2.5 text-sm">
-            <span className="text-muted">
-              Privy sign-in required before REAL pay.
-            </span>
-            <Button type="button" size="sm" onClick={() => login()}>
-              Sign in with Privy
-            </Button>
-          </div>
-        )}
-
         {mode === "live" && railStatus && (
           <p className="font-mono text-[11px] text-subtle">
             server LIVE {railStatus.liveEnabled ? "on" : "off"}
+            {" · "}
+            Buzz notify{" "}
+            {railStatus.joeBuzzNotifyConfigured ? "on" : "off (harness)"}
             {" · "}
             {railStatus.heliusConfigured
               ? `Helius ${railStatus.rpc}`
@@ -537,8 +619,8 @@ export function X402Panel() {
             {OPTX_LINKS.cloudflareWalletHandle}
           </a>
           <span className="mt-1 block text-[11px] text-subtle">
-            Identity / future Monetization Gateway rail — does not settle Solana
-            USDC today. LIVE settle = Privy sign + X Money.{" "}
+            Identity / future Monetization Gateway — not Solana USDC settle
+            today.{" "}
             <a
               href={OPTX_LINKS.cloudflareWalletsBlog}
               target="_blank"
@@ -551,69 +633,189 @@ export function X402Panel() {
         </div>
 
         <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-            <div className="space-y-2">
-              <Label htmlFor="amt">Amount (USDC)</Label>
-              <Input
-                id="amt"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                inputMode="decimal"
-                className="max-w-[160px]"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="amt">Amount (USDC)</Label>
+            <Input
+              id="amt"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              inputMode="decimal"
+              className="max-w-[160px]"
+            />
+          </div>
+
+          {mode === "dry" ? (
+            <Button
+              type="button"
+              variant="accent"
+              disabled={!money || busy}
+              onClick={() => void runDryPay()}
+            >
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Zap className="size-4" />
+              )}
+              Run agent pay
+            </Button>
+          ) : (
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant={mode === "live" ? "default" : "accent"}
-                className={cn(
-                  mode === "live" &&
-                    "bg-amber-600 text-white hover:bg-amber-500",
-                )}
+                className="bg-amber-600 text-white hover:bg-amber-500"
                 disabled={!money || busy || !liveReady}
-                onClick={() => void runPay()}
+                onClick={() => void askJoeSignChallenge()}
               >
-                {busy ? (
+                {busy && !challenge ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Zap className="size-4" />
+                  <MessageSquare className="size-4" />
                 )}
-                {mode === "live" ? "Sign & Pay now" : "Run agent pay"}
+                Ask JOE · DM sign challenge
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                disabled={!money || !mojoTx}
-                onClick={() => {
-                  if (!looksLikeSolanaPubkey(solPayTo)) {
-                    toast.error(
-                      "Enter a Solana USDC destination pubkey for MOJO QR",
-                    );
-                    return;
-                  }
-                  setMojoOpen(true);
-                }}
-                title="Approve Solana USDC spend via MOJO QR (same rail as jtx.chat/login)"
+                onClick={() =>
+                  window.open(OPTX_LINKS.buzzChannel, "_blank", "noopener")
+                }
               >
-                <Smartphone className="size-4" />
-                MOJO QR
+                <ExternalLink className="size-4" />
+                Open Buzz
               </Button>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="sol-payto">MOJO Solana payTo (USDC)</Label>
-            <Input
-              id="sol-payto"
-              value={solPayTo}
-              onChange={(e) => setSolPayTo(e.target.value.trim())}
-              placeholder="Destination Solana pubkey"
-              className="font-mono text-xs"
-            />
-            <p className="text-[11px] text-muted">
-              Phone builds + signs the USDC transfer. Not an X Money URL.
-            </p>
-          </div>
+          )}
         </div>
+
+        {mode === "live" && challenge && (
+          <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-mono text-xs text-amber-200">
+                cid {challenge.cid}
+                {" · "}
+                {challenge.status}
+                {challenge.buzzNotified ? " · Buzz notified" : " · harness"}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  await copyText(challenge.harnessSkill);
+                  toast.success("Harness skill copied");
+                }}
+              >
+                <Copy className="size-3.5" />
+                Copy harness
+              </Button>
+            </div>
+            <p className="text-xs text-muted">
+              {challenge.buzzNotified
+                ? "JOE pushed a sign challenge toward Buzz. Approve there or paste the signature below."
+                : "JOE Buzz DM is not wired server-side yet. Approve with the harness skill (Console harnesses / agent plugin), or paste a signature. Set JOE_BUZZ_WEBHOOK_URL to enable auto DM."}
+            </p>
+            <pre className="max-h-40 overflow-auto rounded-md border border-border bg-bg p-2 font-mono text-[10px] text-muted whitespace-pre-wrap">
+              {challenge.message}
+            </pre>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                value={pasteSig}
+                onChange={(e) => setPasteSig(e.target.value)}
+                placeholder="Paste signature from JOE / harness"
+                className="font-mono text-xs sm:max-w-md"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={busy || !pasteSig.trim()}
+                onClick={() => void submitPastedSignature()}
+              >
+                Submit & settle
+              </Button>
+            </div>
+            {challenge.status === "pending" ||
+            challenge.status === "notified" ? (
+              <p className="flex items-center gap-1.5 font-mono text-[11px] text-subtle">
+                <Loader2 className="size-3 animate-spin" />
+                Waiting for JOE Buzz or harness approve…
+              </p>
+            ) : null}
+
+            <div className="border-t border-border/60 pt-2">
+              <button
+                type="button"
+                className="text-[11px] text-subtle underline-offset-2 hover:underline"
+                onClick={() => setShowPrivyFallback((v) => !v)}
+              >
+                {showPrivyFallback ? "Hide" : "Show"} Privy wallet fallback
+              </button>
+              {showPrivyFallback && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {privyEnabled && ready && !authenticated ? (
+                    <Button type="button" size="sm" onClick={() => login()}>
+                      Sign in with Privy
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy || (privyEnabled && !authenticated)}
+                    onClick={() => void signWithPrivyFallback()}
+                  >
+                    Sign with Privy (optional)
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {mode === "live" && (
+          <div className="border-t border-border/50 pt-3">
+            <button
+              type="button"
+              className="text-[11px] text-subtle underline-offset-2 hover:underline"
+              onClick={() => setShowMojoAdvanced((v) => !v)}
+            >
+              {showMojoAdvanced ? "Hide" : "Advanced"} · MOJO phone QR (not
+              primary)
+            </button>
+            {showMojoAdvanced && (
+              <div className="mt-3 space-y-2">
+                <p className="text-[11px] text-muted">
+                  Phone USDC transfer rail — optional. Primary REAL path is JOE
+                  DM / harness.
+                </p>
+                <Label htmlFor="sol-payto">MOJO Solana payTo (USDC)</Label>
+                <Input
+                  id="sol-payto"
+                  value={solPayTo}
+                  onChange={(e) => setSolPayTo(e.target.value.trim())}
+                  placeholder="Destination Solana pubkey"
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!money || !mojoTx}
+                  onClick={() => {
+                    if (!looksLikeSolanaPubkey(solPayTo)) {
+                      toast.error("Enter a Solana USDC destination pubkey");
+                      return;
+                    }
+                    setMojoOpen(true);
+                  }}
+                >
+                  <Smartphone className="size-4" />
+                  MOJO QR
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {mojoSig && (
           <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 font-mono text-xs">
@@ -623,11 +825,7 @@ export function X402Panel() {
               <div className="mt-1 break-all text-emerald-400">
                 on-chain: {mojoChainSig}
               </div>
-            ) : (
-              <div className="mt-1 text-subtle">
-                Waiting for Helius broadcast… (or phone already sent)
-              </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -643,13 +841,12 @@ export function X402Panel() {
             <div className={last.dryRun ? "text-accent" : "text-amber-300"}>
               {last.dryRun
                 ? "settled · dry-run"
-                : "LIVE · Privy signed · Pay now"}
+                : "LIVE · JOE/harness · Pay now"}
             </div>
             <div className="break-all">sig: {last.transaction}</div>
             <div>
               {last.amount} {last.asset} → @{last.xHandle}
             </div>
-            <div className="text-muted break-all">{last.payTo}</div>
             {last.actionUrl && (
               <a
                 href={last.actionUrl}
@@ -719,31 +916,13 @@ export function X402Panel() {
               push(`← MOJO signed ${r.signature.slice(0, 18)}…`);
               setMojoOpen(false);
               if (r.signedTx) {
-                push("→ Helius broadcast signedTx…");
                 const sent = await broadcastMojoSignedTx(r.signedTx);
                 if (sent.ok) {
                   setMojoChainSig(sent.signature);
-                  push(
-                    `← on-chain ${sent.signature.slice(0, 18)}… (${sent.rpc})`,
-                  );
                   toast.success("MOJO USDC broadcast");
-                  if (money) {
-                    addReceipt({
-                      amount: amount.trim() || "0.10",
-                      asset: "USDC",
-                      xHandle: money.handle,
-                      transaction: sent.signature,
-                      harness: "live",
-                      settledAt: new Date().toISOString(),
-                    });
-                  }
-                } else {
-                  push(`← broadcast failed: ${sent.error}`);
-                  toast.error(sent.error);
-                }
+                } else toast.error(sent.error);
               } else {
                 setMojoChainSig(r.signature);
-                toast.success("MOJO signed (phone broadcast)");
               }
             })();
           }}
