@@ -48,10 +48,10 @@ export const OPTX_LINKS = {
   docsRoot: OPTX_DOCS,
   jettchat: "https://www.jettoptx.chat/",
   /**
-   * Buzz channel (JettChat / JOE agent harness chat).
+   * Buzz channel (JettChat / JOE agent harness chat) — #jett-chat (c=2).
    * x402 LIVE sign challenges notify here when JOE_BUZZ_WEBHOOK_URL is set.
    */
-  buzzChannel: "https://www.jettoptx.chat/",
+  buzzChannel: "https://www.jettoptx.chat/send?c=2",
   buzzChannelLabel: "Buzz · JettChat",
   /** Full chat account (Usage / Wallet / Security / Connectors) */
   jettchatSettings: "https://www.jettoptx.chat/settings",
