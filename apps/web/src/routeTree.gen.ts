@@ -29,6 +29,7 @@ import { Route as ApiTinyfishSearchRouteImport } from './routes/api/tinyfish/sea
 import { Route as ApiXProbeMoneyRouteImport } from './routes/api/x/probe-money'
 import { Route as ApiXSocialGraphRouteImport } from './routes/api/x/social-graph'
 import { Route as ApiX402PayRouteImport } from './routes/api/x402/pay'
+import { Route as ApiX402StatusRouteImport } from './routes/api/x402/status'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -130,6 +131,11 @@ const ApiX402PayRoute = ApiX402PayRouteImport.update({
   path: '/api/x402/pay',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiX402StatusRoute = ApiX402StatusRouteImport.update({
+  id: '/api/x402/status',
+  path: '/api/x402/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/api/x/probe-money': typeof ApiXProbeMoneyRoute
   '/api/x/social-graph': typeof ApiXSocialGraphRoute
   '/api/x402/pay': typeof ApiX402PayRoute
+  '/api/x402/status': typeof ApiX402StatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/api/x/probe-money': typeof ApiXProbeMoneyRoute
   '/api/x/social-graph': typeof ApiXSocialGraphRoute
   '/api/x402/pay': typeof ApiX402PayRoute
+  '/api/x402/status': typeof ApiX402StatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/api/x/probe-money': typeof ApiXProbeMoneyRoute
   '/api/x/social-graph': typeof ApiXSocialGraphRoute
   '/api/x402/pay': typeof ApiX402PayRoute
+  '/api/x402/status': typeof ApiX402StatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/api/x/probe-money'
     | '/api/x/social-graph'
     | '/api/x402/pay'
+    | '/api/x402/status'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/api/x/probe-money'
     | '/api/x/social-graph'
     | '/api/x402/pay'
+    | '/api/x402/status'
   id:
     | '__root__'
     | '/'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/api/x/probe-money'
     | '/api/x/social-graph'
     | '/api/x402/pay'
+    | '/api/x402/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -288,6 +300,7 @@ export interface RootRouteChildren {
   ApiXProbeMoneyRoute: typeof ApiXProbeMoneyRoute
   ApiXSocialGraphRoute: typeof ApiXSocialGraphRoute
   ApiX402PayRoute: typeof ApiX402PayRoute
+  ApiX402StatusRoute: typeof ApiX402StatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -432,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiX402PayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/x402/status': {
+      id: '/api/x402/status'
+      path: '/api/x402/status'
+      fullPath: '/api/x402/status'
+      preLoaderRoute: typeof ApiX402StatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -456,6 +476,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiXProbeMoneyRoute: ApiXProbeMoneyRoute,
   ApiXSocialGraphRoute: ApiXSocialGraphRoute,
   ApiX402PayRoute: ApiX402PayRoute,
+  ApiX402StatusRoute: ApiX402StatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
