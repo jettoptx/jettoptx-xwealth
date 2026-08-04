@@ -4,18 +4,17 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Activity,
-  Beaker,
   BookOpen,
   Bot,
   Command,
+  Copy,
   ExternalLink,
   FlaskConical,
   Home,
   KeyRound,
-  Landmark,
   LayoutGrid,
   Loader2,
   Network,
@@ -26,6 +25,7 @@ import {
   Terminal,
   Wallet,
 } from "lucide-react";
+import { toast } from "sonner";
 import { OPTX_LINKS } from "@/lib/optx-links";
 import { OPTX_MARK } from "@/lib/brand";
 import {
@@ -35,21 +35,61 @@ import {
   type DiscoverLane,
   type Web4ApiPlugin,
 } from "@/lib/web4-seo";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, copyText } from "@/lib/utils";
 import { JTX_BUY_URL } from "@/lib/jtx-api";
 
+const USAGE_KEY = "xwealth.joe.api.usage.v1";
+
+type UsageBucket = {
+  searches: number;
+  agentQueries: number;
+  defiQueries: number;
+  pluginOpens: number;
+  lastQuery: string | null;
+  updatedAt: number;
+};
+
+function loadUsage(): UsageBucket {
+  try {
+    const raw = localStorage.getItem(USAGE_KEY);
+    if (!raw) throw new Error("empty");
+    return JSON.parse(raw) as UsageBucket;
+  } catch {
+    return {
+      searches: 0,
+      agentQueries: 0,
+      defiQueries: 0,
+      pluginOpens: 0,
+      lastQuery: null,
+      updatedAt: Date.now(),
+    };
+  }
+}
+
+function bumpUsage(patch: Partial<UsageBucket>) {
+  const next = { ...loadUsage(), ...patch, updatedAt: Date.now() };
+  try {
+    localStorage.setItem(USAGE_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore quota */
+  }
+  return next;
+}
+
 export type CmdTab = "search" | "agents" | "protocols" | "docs" | "console";
+/** DOJO-aligned Augments rail — every id has a real in-app panel or SPA route. */
 export type RailId =
   | "dashboard"
   | "search"
   | "tools"
   | "agents"
   | "analytics"
-  | "labs"
-  | "security"
+  | "keys"
+  | "dojo"
   | "docs"
   | "marketplace";
 
@@ -194,15 +234,15 @@ const RAIL: Array<{
   label: string;
   icon: typeof Home;
 }> = [
-  { id: "dashboard", label: "Dashboard", icon: Home },
+  { id: "dashboard", label: "Home", icon: Home },
   { id: "search", label: "Search", icon: Search },
   { id: "tools", label: "Tools", icon: LayoutGrid },
   { id: "agents", label: "Agents", icon: Bot },
-  { id: "analytics", label: "Analytics", icon: Activity },
-  { id: "labs", label: "Labs", icon: Beaker },
-  { id: "security", label: "Security / Keys", icon: KeyRound },
+  { id: "analytics", label: "JOE API analytics", icon: Activity },
+  { id: "keys", label: "Wallets & keys", icon: KeyRound },
+  { id: "dojo", label: "DOJO", icon: FlaskConical },
   { id: "docs", label: "Docs", icon: BookOpen },
-  { id: "marketplace", label: "Marketplace", icon: Sparkles },
+  { id: "marketplace", label: "Pay Links", icon: Sparkles },
 ];
 
 type Props = {
@@ -253,6 +293,8 @@ export function Web4OperatingSurface({
   network,
   onNetwork,
 }: Props) {
+  const navigate = useNavigate();
+  const { user } = useCurrentUserState();
   const [cmdTab, setCmdTab] = useState<CmdTab>("search");
   const [rail, setRail] = useState<RailId>("dashboard");
   const [toolFilter, setToolFilter] = useState<string>("All");
@@ -260,6 +302,18 @@ export function Web4OperatingSurface({
   const [recent, setRecent] = useState<string[]>([]);
   const [agentOpen, setAgentOpen] = useState(true);
   const [cmdFocused, setCmdFocused] = useState(false);
+  const [usage, setUsage] = useState<UsageBucket>(() =>
+    typeof window !== "undefined"
+      ? loadUsage()
+      : {
+          searches: 0,
+          agentQueries: 0,
+          defiQueries: 0,
+          pluginOpens: 0,
+          lastQuery: null,
+          updatedAt: Date.now(),
+        },
+  );
 
   const modules = useMemo(() => {
     const fromPlugins = WEB4_API_PLUGINS.map(pluginToModule);
@@ -306,7 +360,7 @@ export function Web4OperatingSurface({
       return;
     }
     if (cmdTab === "console") {
-      window.location.href = "/console";
+      void navigate({ to: "/console" });
       return;
     }
     const nextLane: DiscoverLane =
@@ -316,19 +370,48 @@ export function Web4OperatingSurface({
           ? "agents"
           : lane;
     onLane(nextLane);
+    const prev = loadUsage();
+    setUsage(
+      bumpUsage({
+        searches: prev.searches + 1,
+        agentQueries: prev.agentQueries + (nextLane === "agents" ? 1 : 0),
+        defiQueries: prev.defiQueries + (nextLane === "defi" ? 1 : 0),
+        lastQuery: query,
+      }),
+    );
     onRunDiscover({ query, laneOverride: nextLane });
   }
 
   function onRail(id: RailId) {
-    setRail(id);
-    if (id === "marketplace") onOpenMarketplace();
-    if (id === "docs") window.open(OPTX_LINKS.moaDocs, "_blank", "noreferrer");
-    if (id === "security") window.location.href = OPTX_LINKS.settingsPath;
-    if (id === "agents") setCmdTab("agents");
-    if (id === "search") {
-      setCmdTab("search");
-      document.getElementById("web4-cmd-input")?.focus();
+    // Never hard-navigate (window.location) — that remounts Privy and looks like logout.
+    if (id === "dojo") {
+      void navigate({ to: "/dojo" });
+      return;
     }
+    if (id === "marketplace") {
+      onOpenMarketplace();
+      return;
+    }
+    if (id === "docs") {
+      window.open(OPTX_LINKS.moaDocs, "_blank", "noreferrer");
+      return;
+    }
+    setRail(id);
+    if (id === "agents") {
+      setCmdTab("agents");
+      setToolFilter("Agents");
+    }
+    if (id === "tools") {
+      setToolFilter("All");
+      document.getElementById("web4-tools")?.scrollIntoView({ behavior: "smooth" });
+    }
+    if (id === "search" || id === "dashboard") {
+      setCmdTab("search");
+      if (id === "search") {
+        queueMicrotask(() => document.getElementById("web4-cmd-input")?.focus());
+      }
+    }
+    if (id === "analytics") setUsage(loadUsage());
   }
 
   return (
@@ -537,6 +620,38 @@ export function Web4OperatingSurface({
         ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {rail === "analytics" ? (
+            <JoeApiAnalyticsPanel
+              usage={usage}
+              jtxOk={jtxOk}
+              network={network}
+              lane={lane}
+              onReset={() => {
+                const empty = bumpUsage({
+                  searches: 0,
+                  agentQueries: 0,
+                  defiQueries: 0,
+                  pluginOpens: 0,
+                  lastQuery: null,
+                });
+                setUsage(empty);
+                toast.message("JOE API usage counters reset");
+              }}
+            />
+          ) : null}
+          {rail === "keys" ? (
+            <WalletsKeysPanel
+              wallet={wallet}
+              onWalletChange={onWalletChange}
+              jtxOk={jtxOk}
+              onCheckJtx={onCheckJtx}
+              jtxBusy={jtxBusy}
+              handle={user?.handle ?? null}
+              displayName={user?.displayName ?? null}
+            />
+          ) : null}
+          {rail !== "analytics" && rail !== "keys" ? (
+            <>
           {/* Hero / search zone */}
           <section className="relative border-b border-border px-3 py-5 sm:px-6">
             <div
@@ -639,7 +754,7 @@ export function Web4OperatingSurface({
           </section>
 
           {/* Tool grid */}
-          <section className="px-3 py-5 sm:px-6">
+          <section id="web4-tools" className="px-3 py-5 sm:px-6">
             <div className="mx-auto max-w-6xl space-y-3">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
@@ -687,6 +802,10 @@ export function Web4OperatingSurface({
                         (p) => p.id === m.pluginId,
                       );
                       if (!plugin) return;
+                      const prev = loadUsage();
+                      setUsage(
+                        bumpUsage({ pluginOpens: prev.pluginOpens + 1 }),
+                      );
                       if (plugin.lane) onLane(plugin.lane);
                       if (plugin.query) {
                         onDiscoverQ(plugin.query);
@@ -709,6 +828,11 @@ export function Web4OperatingSurface({
                   Open marketplace directory
                 </Button>
                 <Button asChild size="sm" variant="outline">
+                  <Link to="/paylinks" search={{ embed: undefined }}>
+                    Pay Links
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
                   <a href={JTX_BUY_URL} target="_blank" rel="noreferrer">
                     Buy JTX
                     <ExternalLink className="ml-1 size-3" />
@@ -717,6 +841,8 @@ export function Web4OperatingSurface({
               </div>
             </div>
           </section>
+            </>
+          ) : null}
         </div>
 
         {/* Agent session panel */}
@@ -791,6 +917,280 @@ export function Web4OperatingSurface({
 
 function filterImpliesDefi(q: string): boolean {
   return /\b(aave|defi|token|yield|mev|solana|jup|liquidity)\b/i.test(q);
+}
+
+function JoeApiAnalyticsPanel({
+  usage,
+  jtxOk,
+  network,
+  lane,
+  onReset,
+}: {
+  usage: UsageBucket;
+  jtxOk: boolean | null;
+  network: string;
+  lane: DiscoverLane;
+  onReset: () => void;
+}) {
+  const rows = [
+    {
+      label: "Searches run",
+      value: usage.searches,
+      hint: "Web4 command bar · TinyFish / Blockworks lanes",
+    },
+    {
+      label: "Agent lane queries",
+      value: usage.agentQueries,
+      hint: "JOE / X Money agent discovery",
+    },
+    {
+      label: "DeFi lane queries",
+      value: usage.defiQueries,
+      hint: "Token / protocol ranker hits",
+    },
+    {
+      label: "Plugin opens",
+      value: usage.pluginOpens,
+      hint: "Grok · Aeon · TinyFish · Agenc tiles",
+    },
+  ];
+  return (
+    <section className="px-3 py-5 sm:px-6">
+      <div className="mx-auto max-w-5xl space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-sky-700/80 dark:text-cyan-300/70">
+              JOE API · usage
+            </p>
+            <h2 className="mt-1 font-display text-xl font-semibold tracking-tight">
+              Token & discovery analytics
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-muted">
+              Local session counters for Augments API traffic (browser-stored).
+              Server billables still live on each provider dashboard.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge variant="outline" className="font-mono text-[10px]">
+              net={network}
+            </Badge>
+            <Badge variant="outline" className="font-mono text-[10px]">
+              lane={lane}
+            </Badge>
+            <Badge
+              variant={jtxOk ? "success" : "warn"}
+              className="font-mono text-[10px]"
+            >
+              {jtxOk ? "JTX PASS" : "JTX locked"}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {rows.map((r) => (
+            <div
+              key={r.label}
+              className="rounded-xl border border-border bg-surface p-4 shadow-sm dark:bg-white/[0.03]"
+            >
+              <p className="font-mono text-[10px] uppercase tracking-wide text-subtle">
+                {r.label}
+              </p>
+              <p className="mt-2 font-display text-3xl font-semibold tabular-nums">
+                {r.value.toLocaleString()}
+              </p>
+              <p className="mt-1 text-[11px] text-muted">{r.hint}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-border bg-elevated/40 p-4">
+          <p className="font-mono text-[10px] uppercase tracking-wide text-subtle">
+            Last query
+          </p>
+          <p className="mt-1 font-mono text-sm text-fg">
+            {usage.lastQuery ?? "— run a search from Home to populate —"}
+          </p>
+          <p className="mt-2 text-[11px] text-muted">
+            Updated{" "}
+            {new Date(usage.updatedAt).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="secondary">
+            <a
+              href="https://console.x.ai"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1"
+            >
+              Grok / xAI usage
+              <ExternalLink className="size-3" />
+            </a>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <a
+              href="https://agent.tinyfish.ai/api-keys"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1"
+            >
+              TinyFish keys
+              <ExternalLink className="size-3" />
+            </a>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/dojo">DOJO dry-run</Link>
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onReset}>
+            Reset local counters
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function WalletsKeysPanel({
+  wallet,
+  onWalletChange,
+  jtxOk,
+  onCheckJtx,
+  jtxBusy,
+  handle,
+  displayName,
+}: {
+  wallet: string;
+  onWalletChange: (w: string) => void;
+  jtxOk: boolean | null;
+  onCheckJtx: () => void;
+  jtxBusy?: boolean;
+  handle: string | null;
+  displayName: string | null;
+}) {
+  const payUrl = handle ? `https://x.com/i/money/pay/${handle}` : null;
+  return (
+    <section className="px-3 py-5 sm:px-6">
+      <div className="mx-auto max-w-3xl space-y-4">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-sky-700/80 dark:text-cyan-300/70">
+            Wallets & keys
+          </p>
+          <h2 className="mt-1 font-display text-xl font-semibold tracking-tight">
+            Stored wallet · account keys
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Settings for the Solana SKU gate and linked login methods. No full
+            page reload — Privy session stays attached.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm dark:bg-white/[0.03]">
+          <div className="flex items-center gap-2">
+            <Wallet className="size-4 text-accent" />
+            <h3 className="text-sm font-semibold">Solana wallet (JTX gate)</h3>
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Used as <span className="font-mono">X-Solana-Wallet</span> on gated
+            JOE API calls. Same field as the Augments top bar.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Input
+              value={wallet}
+              onChange={(e) => onWalletChange(e.target.value)}
+              placeholder="Solana wallet address"
+              className="h-9 flex-1 font-mono text-xs"
+              spellCheck={false}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9"
+              disabled={!wallet.trim()}
+              onClick={() => {
+                void copyText(wallet.trim());
+                toast.success("Wallet copied");
+              }}
+            >
+              <Copy className="size-3.5" />
+            </Button>
+            <Button
+              size="sm"
+              className="h-9 gap-1"
+              disabled={jtxBusy || wallet.trim().length < 32}
+              onClick={onCheckJtx}
+            >
+              {jtxBusy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Shield className="size-3.5" />
+              )}
+              {jtxOk === true ? "JTX ✓" : jtxOk === false ? "JTX ✗" : "Check gate"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm dark:bg-white/[0.03]">
+          <div className="flex items-center gap-2">
+            <KeyRound className="size-4 text-accent" />
+            <h3 className="text-sm font-semibold">Account & pay link</h3>
+          </div>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Display</dt>
+              <dd className="font-medium">{displayName ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">X handle</dt>
+              <dd className="font-mono text-xs">
+                {handle ? `@${handle}` : "— connect X in Settings"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">X Money</dt>
+              <dd className="max-w-[60%] truncate font-mono text-[11px] text-muted">
+                {payUrl ?? "—"}
+              </dd>
+            </div>
+          </dl>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="secondary">
+              <Link to="/settings">
+                <Settings2 className="size-3.5" />
+                Open Settings
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/paylinks" search={{ embed: undefined }}>
+                Pay Links
+              </Link>
+            </Button>
+            {payUrl ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  void copyText(payUrl);
+                  toast.success("Pay link copied");
+                }}
+              >
+                <Copy className="size-3.5" />
+                Copy pay link
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-dashed border-border-strong bg-elevated/30 p-4 text-xs text-muted">
+          Provider API keys (TinyFish, Helius, Messari) stay in Vercel / server
+          env — never paste them into this browser panel.
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function ToolCard({
