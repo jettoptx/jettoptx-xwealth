@@ -62,6 +62,13 @@ export const OPTX_LINKS = {
   pluginGrok: XWEALTH_PLUGIN.grokPlugin,
   /** In-app settings (account + login connections) */
   settingsPath: "/settings",
+  /**
+   * Cloudflare Wallets agent identity (claim / Monetization Gateway rail).
+   * Not a Solana USDC settle destination today — Privy + X Money is the LIVE path.
+   */
+  cloudflareWallet: "https://augment.cloudflare.pay",
+  cloudflareWalletHandle: "augment.cloudflare.pay",
+  cloudflareWalletsBlog: "https://blog.cloudflare.com/wallets/",
 } as const;
 
 /** Where signed-in users go after Privy / OAuth completes. */

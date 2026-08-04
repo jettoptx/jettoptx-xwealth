@@ -42,7 +42,8 @@ export const Route = createFileRoute("/dojo")({
 
 /**
  * DOJO — operator paylink cockpit (distinct from /console account workspace).
- * JTX ≥1 gate is UI-enforced; LIVE settle still requires X402_LIVE_ENABLED.
+ * JTX ≥1 gate is UI-enforced; LIVE settle gated by server X402_LIVE_ENABLED
+ * (see /api/x402/status).
  */
 function DojoHubPage() {
   const { user } = useCurrentUserState();
@@ -55,11 +56,37 @@ function DojoHubPage() {
   );
   const [gate, setGate] = useState<JtxGateResult | null>(null);
   const [gateBusy, setGateBusy] = useState(false);
+  const [x402Status, setX402Status] = useState<{
+    liveEnabled: boolean;
+    heliusConfigured: boolean;
+    rpc: string;
+  } | null>(null);
 
   useEffect(() => {
     if (walletStore && walletStore !== wallet) setWallet(walletStore);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync store → local once
   }, [walletStore]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/x402/status", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          liveEnabled: boolean;
+          heliusConfigured: boolean;
+          rpc: string;
+        };
+        if (!cancelled) setX402Status(data);
+      } catch {
+        /* keep null footer */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function runGate() {
     const w = wallet.trim();
@@ -332,8 +359,23 @@ function DojoHubPage() {
             </div>
 
             <p className="pb-2 text-center font-mono text-[10px] text-subtle">
-              /dojo · JTX gate · PayLinkPanel · X402Panel · LIVE needs
-              X402_LIVE_ENABLED
+              /dojo · JTX gate · PayLinkPanel · X402Panel ·{" "}
+              {x402Status
+                ? `LIVE ${x402Status.liveEnabled ? "on" : "off"} · ${
+                    x402Status.heliusConfigured
+                      ? x402Status.rpc
+                      : "no Helius"
+                  }`
+                : "LIVE status…"}
+              {" · "}
+              <a
+                href={OPTX_LINKS.cloudflareWallet}
+                target="_blank"
+                rel="noreferrer"
+                className="underline-offset-2 hover:underline"
+              >
+                {OPTX_LINKS.cloudflareWalletHandle}
+              </a>
             </p>
           </section>
         </div>

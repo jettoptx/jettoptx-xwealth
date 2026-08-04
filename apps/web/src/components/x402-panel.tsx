@@ -1,11 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLogin, usePrivy } from "@privy-io/react-auth";
 import {
   useCreateWallet,
-  usePrivy,
   useSignMessage,
   useWallets,
-} from "@privy-io/react-auth";
-import { FlaskConical, Loader2, ShieldAlert, Smartphone, Zap } from "lucide-react";
+} from "@privy-io/react-auth/solana";
+import {
+  FlaskConical,
+  Loader2,
+  ShieldAlert,
+  Smartphone,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +32,11 @@ import {
   USDC_MINT_SOLANA,
   type X402SettleResult,
 } from "@/lib/x402";
-import { buildX402SignMessage } from "@/lib/privy-pay-sign";
+import {
+  buildX402SignMessage,
+  bytesToBase58,
+  sleep,
+} from "@/lib/privy-pay-sign";
 import { useWealthStore } from "@/lib/store";
 import { privyEnabled } from "@/lib/auth/privy";
 import { cn } from "@/lib/utils";
@@ -42,6 +52,19 @@ import { buildJtxProofHeaders } from "@/lib/jtx-proof";
 import { OPTX_LINKS } from "@/lib/optx-links";
 
 type PayMode = "dry" | "live";
+
+type X402RailStatus = {
+  liveEnabled: boolean;
+  heliusConfigured: boolean;
+  rpc: string;
+  cloudflareWallet?: {
+    handle: string;
+    url: string;
+    blog: string;
+    role: string;
+    note: string;
+  };
+};
 
 export function X402Panel() {
   const money = useWealthStore((s) => s.money);
@@ -60,12 +83,33 @@ export function X402Panel() {
   const [mojoChainSig, setMojoChainSig] = useState<string | null>(null);
   /** Solana USDC destination for Mojo QR (not X Money URL). */
   const [solPayTo, setSolPayTo] = useState("");
+  const [railStatus, setRailStatus] = useState<X402RailStatus | null>(null);
 
-  // Privy wallet hooks — only used on REAL path
+  // Privy — identity from main package; Solana wallets from /solana
   const { ready, authenticated } = usePrivy();
+  const { login } = useLogin();
   const { wallets } = useWallets();
   const { signMessage } = useSignMessage();
   const { createWallet } = useCreateWallet();
+  const walletsRef = useRef(wallets);
+  walletsRef.current = wallets;
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/x402/status", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as X402RailStatus;
+        if (!cancelled) setRailStatus(data);
+      } catch {
+        /* footer / badge stay unknown */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const solDest = resolveSolanaPayTo({
     destination: solPayTo,
@@ -87,63 +131,90 @@ export function X402Panel() {
         typeof window !== "undefined"
           ? `${window.location.origin}/api/x402/pay`
           : "/api/x402/pay",
-      // Phone builds transfer when null (signer = Mojo wallet)
       unsignedTx: null,
     };
   }, [money, amount, solDest]);
+
+  const liveReady =
+    mode === "dry" ||
+    (liveConfirm &&
+      (!privyEnabled || (ready && authenticated)));
 
   function push(line: string) {
     setLog((L) => [line, ...L].slice(0, 14));
   }
 
-  /** Ensure a Privy wallet exists and sign the x402 live message. */
+  /** Ensure a Privy Solana wallet exists and sign the x402 live message. */
   async function signWithPrivy(message: string): Promise<{
     signature: string;
     from: string;
   }> {
-    if (!ready || !authenticated) {
-      throw new Error("Sign in with X (Privy) before REAL pay");
+    if (!privyEnabled) {
+      throw new Error("Privy is not configured — cannot REAL-sign");
+    }
+    if (!ready) {
+      throw new Error("Privy still loading — wait a moment and retry");
+    }
+    if (!authenticated) {
+      throw new Error("Sign in with Privy before REAL pay");
     }
 
-    let wallet = wallets[0];
+    let wallet = walletsRef.current[0];
     if (!wallet) {
-      push("→ Privy: creating wallet for payment signature…");
-      await createWallet();
-      // wallets list updates async — brief wait + re-read via getAccessToken path
-      await new Promise((r) => setTimeout(r, 600));
-      wallet = wallets[0];
+      push("→ Privy Solana: creating embedded wallet…");
+      try {
+        const created = await createWallet();
+        const want = created.wallet?.address;
+        for (let i = 0; i < 25; i++) {
+          await sleep(200);
+          const list = walletsRef.current;
+          wallet =
+            (want
+              ? list.find((w) => w.address === want)
+              : undefined) || list[0];
+          if (wallet) break;
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (/authenticated/i.test(msg)) {
+          throw new Error(
+            "Privy session required before creating a Solana wallet — sign in, then retry REAL",
+          );
+        }
+        if (/already has/i.test(msg)) {
+          // Wallet exists but hook list not ready yet — wait
+          for (let i = 0; i < 25; i++) {
+            await sleep(200);
+            wallet = walletsRef.current[0];
+            if (wallet) break;
+          }
+        } else {
+          throw e;
+        }
+      }
     }
 
-    // After createWallet the hook may still be empty; prompt sign which
-    // Privy will route to the embedded wallet once ready.
-    const address = wallet?.address;
-    push(
-      address
-        ? `→ Privy wallet ${address.slice(0, 6)}…${address.slice(-4)}`
-        : "→ Privy: requesting wallet signature…",
-    );
+    if (!wallet) {
+      throw new Error(
+        "Solana wallet not ready after create — wait a second and retry Sign & Pay",
+      );
+    }
 
-    const result = await signMessage({
-      message,
-      ...(address ? { address } : {}),
+    const address = wallet.address;
+    push(`→ Privy Solana ${address.slice(0, 6)}…${address.slice(-4)}`);
+
+    const encoded = new TextEncoder().encode(message);
+    const { signature: sigBytes } = await signMessage({
+      message: encoded,
+      wallet,
     });
+    const signature = bytesToBase58(sigBytes);
 
-    const signature =
-      typeof result === "string"
-        ? result
-        : result && typeof result === "object" && "signature" in result
-          ? String((result as { signature: string }).signature)
-          : String(result);
-
-    const from =
-      address ||
-      (signature.startsWith("0x") ? "privy-evm" : "privy-wallet");
-
-    if (address && !walletStore) {
+    if (!walletStore) {
       setSolanaWallet(address);
     }
 
-    return { signature, from };
+    return { signature, from: address };
   }
 
   async function runPay() {
@@ -153,6 +224,11 @@ export function X402Panel() {
     }
     if (mode === "live" && !liveConfirm) {
       toast.error("Confirm LIVE before running REAL pay");
+      return;
+    }
+    if (mode === "live" && privyEnabled && (!ready || !authenticated)) {
+      toast.error("Sign in with Privy before REAL pay");
+      login();
       return;
     }
 
@@ -205,7 +281,6 @@ export function X402Panel() {
       let sigBody: string;
 
       if (isLive && privyEnabled) {
-        // 2) Privy signs the payment message (wallet UI)
         const msg = buildX402SignMessage({
           amountUsdc: amount,
           xHandle: money.handle,
@@ -214,7 +289,7 @@ export function X402Panel() {
         });
         const signed = await signWithPrivy(msg);
         fromWallet = signed.from;
-        push(`→ PAYMENT-SIGNATURE (Privy) ${signed.signature.slice(0, 18)}…`);
+        push(`→ PAYMENT-SIGNATURE (Privy Solana) ${signed.signature.slice(0, 18)}…`);
 
         const payload = buildPaymentPayload({
           amountUsdc: amount,
@@ -224,7 +299,6 @@ export function X402Panel() {
           fromWallet,
           dryRun: false,
         });
-        // Replace random sig with Privy wallet signature
         payload.payload.signature = signed.signature;
         sigBody = encodePaymentSignature(payload);
       } else {
@@ -253,7 +327,8 @@ export function X402Panel() {
         toast.error(err, {
           action: {
             label: "Buy JTX",
-            onClick: () => window.open(JTX_BUY_URL || OPTX_LINKS.jtxBuy, "_blank"),
+            onClick: () =>
+              window.open(JTX_BUY_URL || OPTX_LINKS.jtxBuy, "_blank"),
           },
         });
         return;
@@ -298,7 +373,8 @@ export function X402Panel() {
         toast.error(err, {
           action: {
             label: "Buy JTX",
-            onClick: () => window.open(JTX_BUY_URL || OPTX_LINKS.jtxBuy, "_blank"),
+            onClick: () =>
+              window.open(JTX_BUY_URL || OPTX_LINKS.jtxBuy, "_blank"),
           },
         });
         return;
@@ -325,7 +401,6 @@ export function X402Panel() {
         }
       }
 
-      // 4) REAL → open X Money "Pay now" window
       if (isLive) {
         const payUrl = data.actionUrl || money.transferUrl;
         push(
@@ -364,7 +439,8 @@ export function X402Panel() {
             </CardTitle>
             <CardDescription className="mt-1">
               Dry-run simulates the agent path. REAL asks Privy to sign the
-              payment message in your wallet, then opens X Money to Pay now.
+              payment message with a Solana wallet, then opens X Money to Pay
+              now.
             </CardDescription>
           </div>
           <Badge
@@ -374,7 +450,7 @@ export function X402Panel() {
               mode === "live" && "border-amber-500/50 text-amber-400",
             )}
           >
-            {mode === "live" ? "REAL · Privy sign" : "dry-run"}
+            {mode === "live" ? "REAL · Privy Solana" : "dry-run"}
           </Badge>
         </div>
       </CardHeader>
@@ -418,8 +494,8 @@ export function X402Panel() {
             <span>
               <span className="font-medium text-amber-200">I confirm LIVE</span>
               <span className="mt-0.5 block text-xs text-muted">
-                Privy will prompt your wallet to sign the x402 payment message,
-                then a new window opens on{" "}
+                Privy will prompt your Solana wallet to sign the x402 payment
+                message, then a new window opens on{" "}
                 <span className="font-mono text-fg">x.com/i/money/…</span> for
                 Pay now. Wallet is only created if you don’t have one yet (not
                 on login).
@@ -427,6 +503,52 @@ export function X402Panel() {
             </span>
           </label>
         )}
+
+        {mode === "live" && privyEnabled && ready && !authenticated && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2.5 text-sm">
+            <span className="text-muted">
+              Privy sign-in required before REAL pay.
+            </span>
+            <Button type="button" size="sm" onClick={() => login()}>
+              Sign in with Privy
+            </Button>
+          </div>
+        )}
+
+        {mode === "live" && railStatus && (
+          <p className="font-mono text-[11px] text-subtle">
+            server LIVE {railStatus.liveEnabled ? "on" : "off"}
+            {" · "}
+            {railStatus.heliusConfigured
+              ? `Helius ${railStatus.rpc}`
+              : "Helius not configured"}
+          </p>
+        )}
+
+        <div className="rounded-lg border border-border/80 bg-bg/60 px-3 py-2.5 text-xs text-muted">
+          <span className="font-medium text-fg">Cloudflare agent wallet</span>
+          {" · "}
+          <a
+            href={OPTX_LINKS.cloudflareWallet}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-accent underline-offset-2 hover:underline"
+          >
+            {OPTX_LINKS.cloudflareWalletHandle}
+          </a>
+          <span className="mt-1 block text-[11px] text-subtle">
+            Identity / future Monetization Gateway rail — does not settle Solana
+            USDC today. LIVE settle = Privy sign + X Money.{" "}
+            <a
+              href={OPTX_LINKS.cloudflareWalletsBlog}
+              target="_blank"
+              rel="noreferrer"
+              className="underline-offset-2 hover:underline"
+            >
+              CF Wallets blog
+            </a>
+          </span>
+        </div>
 
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -448,7 +570,7 @@ export function X402Panel() {
                   mode === "live" &&
                     "bg-amber-600 text-white hover:bg-amber-500",
                 )}
-                disabled={!money || busy || (mode === "live" && !liveConfirm)}
+                disabled={!money || busy || !liveReady}
                 onClick={() => void runPay()}
               >
                 {busy ? (
@@ -464,7 +586,9 @@ export function X402Panel() {
                 disabled={!money || !mojoTx}
                 onClick={() => {
                   if (!looksLikeSolanaPubkey(solPayTo)) {
-                    toast.error("Enter a Solana USDC destination pubkey for MOJO QR");
+                    toast.error(
+                      "Enter a Solana USDC destination pubkey for MOJO QR",
+                    );
                     return;
                   }
                   setMojoOpen(true);
@@ -599,7 +723,9 @@ export function X402Panel() {
                 const sent = await broadcastMojoSignedTx(r.signedTx);
                 if (sent.ok) {
                   setMojoChainSig(sent.signature);
-                  push(`← on-chain ${sent.signature.slice(0, 18)}… (${sent.rpc})`);
+                  push(
+                    `← on-chain ${sent.signature.slice(0, 18)}… (${sent.rpc})`,
+                  );
                   toast.success("MOJO USDC broadcast");
                   if (money) {
                     addReceipt({
@@ -616,7 +742,6 @@ export function X402Panel() {
                   toast.error(sent.error);
                 }
               } else {
-                // Phone may have signAndSend'd already — signature is the chain sig.
                 setMojoChainSig(r.signature);
                 toast.success("MOJO signed (phone broadcast)");
               }
