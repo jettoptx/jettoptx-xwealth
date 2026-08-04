@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { Button } from "@/components/ui/button";
@@ -50,8 +50,8 @@ export function SiteHeader() {
 
         <nav className="ml-2 hidden items-center gap-0.5 sm:flex">
           <HeaderLink to="/console">Console</HeaderLink>
-          <HeaderLink to="/paylinks" accent="orange">
-            Pay Links
+          <HeaderLink to="/augments" accent="orange" alsoActive={["/paylinks"]}>
+            Augments
           </HeaderLink>
           <HeaderLink to="/dojo">DOJO</HeaderLink>
         </nav>
@@ -90,12 +90,17 @@ function HeaderLink({
   to,
   children,
   accent,
+  alsoActive = [],
 }: {
-  to: "/console" | "/dojo" | "/" | "/paylinks";
+  to: "/console" | "/dojo" | "/" | "/augments" | "/paylinks";
   children: ReactNode;
   accent?: "orange";
+  /** Extra pathnames that count as active (e.g. Pay Links under Augments). */
+  alsoActive?: string[];
 }) {
   const orange = accent === "orange";
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const subActive = alsoActive.includes(pathname);
   return (
     <Link
       to={to}
@@ -104,6 +109,10 @@ function HeaderLink({
         orange
           ? "text-augment hover:bg-augment/10 hover:text-augment-soft [&.active]:bg-augment/15 [&.active]:text-augment-soft"
           : "text-muted hover:bg-elevated hover:text-fg [&.active]:bg-elevated [&.active]:text-fg",
+        subActive &&
+          (orange
+            ? "active bg-augment/15 text-augment-soft"
+            : "active bg-elevated text-fg"),
       )}
       activeProps={{
         className: orange

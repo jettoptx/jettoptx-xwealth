@@ -209,7 +209,8 @@ function PaylinksPage() {
   const walletStore = useWealthStore((s) => s.solanaWallet);
   const setSolanaWallet = useWealthStore((s) => s.setSolanaWallet);
 
-  const [surface, setSurface] = useState<"ops" | "marketplace">("ops");
+  // Pay Links is the Augments sub-page — land on marketplace, not ops.
+  const [surface, setSurface] = useState<"ops" | "marketplace">("marketplace");
   const [wallet, setWallet] = useState(
     () => walletStore || defaultWalletFromEnv(),
   );
@@ -628,17 +629,17 @@ function PaylinksPage() {
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2 backdrop-blur-md sm:px-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-xs"
-              onClick={() => setSurface("ops")}
-            >
-              ← Ops
+            <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs">
+              <Link to="/augments" search={{ embed: undefined }}>
+                ← Augments
+              </Link>
             </Button>
             <h1 className="font-display text-sm font-semibold tracking-tight sm:text-base">
               {OPTX_MARK} · Pay Links
             </h1>
+            <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-wider">
+              Augments sub-page
+            </Badge>
             <span className="hidden font-mono text-[10px] text-subtle sm:inline">
               {WEB4_SLOGAN}
             </span>

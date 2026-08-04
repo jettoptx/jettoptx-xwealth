@@ -143,6 +143,11 @@ function ConsolePage() {
               </a>
             </Button>
             <Button asChild size="sm" variant="ghost">
+              <Link to="/augments" search={{ embed: undefined }}>
+                Augments
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="ghost">
               <Link to="/paylinks" search={{ embed: undefined }}>
                 Pay Links
               </Link>
