@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { usePrivy } from "@privy-io/react-auth";
+import { useWallets as useSolanaWallets } from "@privy-io/react-auth/solana";
 import {
   CheckCircle2,
   ExternalLink,
@@ -11,6 +12,7 @@ import {
   Settings2,
   Sun,
   Unlink,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { RedirectToSignIn } from "@/lib/auth/gates";
@@ -21,6 +23,8 @@ import { OPTX_LINKS } from "@/lib/optx-links";
 import { useTheme } from "@/lib/theme";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -39,6 +43,17 @@ import {
   XLogo,
 } from "@/components/brand-icons";
 import { cn } from "@/lib/utils";
+import {
+  useWealthStore,
+  type PreferredWalletSource,
+} from "@/lib/store";
+import { looksLikeSolanaPubkey } from "@/lib/usdc-payto";
+import {
+  firstSolanaAddress,
+  isEvmAddress,
+  pickPrivySolanaAddress,
+  resolveSolanaDeskWallet,
+} from "@/lib/auth/solana-wallet";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -133,7 +148,8 @@ function SettingsPage() {
             Account
           </h1>
           <p className="mt-1 text-xs text-muted sm:text-sm">
-            Profile, login connections, and appearance for X Wealth.
+            Profile, agent wallet, login connections, and appearance for X
+            Wealth.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -150,6 +166,9 @@ function SettingsPage() {
         <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
           <AccountCard />
           <AppearanceCard />
+          <div className="lg:col-span-2">
+            <AgentWalletPrefsCard />
+          </div>
           <div className="lg:col-span-2">
             <LoginConnectionsCard />
           </div>
@@ -289,9 +308,16 @@ function PrivyConnections() {
     };
 
     for (const def of CONNECTION_DEFS) {
-      const match = accounts.find((a) =>
+      const matches = accounts.filter((a) =>
         (def.accountTypes as readonly string[]).includes(String(a.type ?? "")),
       );
+      // Wallet row: prefer Solana over Ethereum when both are linked
+      const match =
+        def.id === "wallet"
+          ? matches.find((a) => a.chainType === "solana") ||
+            matches.find((a) => looksLikeSolanaPubkey(a.address)) ||
+            matches[0]
+          : matches[0];
       if (!match) continue;
       byId[def.id] = {
         connected: true,
@@ -322,12 +348,19 @@ function PrivyConnections() {
         raw: null,
       };
     }
-    if (user?.wallet?.address && !byId.wallet.connected) {
-      byId.wallet = {
-        connected: true,
-        detail: shortAddr(user.wallet.address),
-        raw: null,
-      };
+    {
+      const sol = pickPrivySolanaAddress(user);
+      const fallback = user?.wallet?.address;
+      const addr = sol || fallback;
+      if (addr && !byId.wallet.connected) {
+        byId.wallet = {
+          connected: true,
+          detail: sol
+            ? `${shortAddr(sol)} · solana`
+            : shortAddr(addr),
+          raw: null,
+        };
+      }
     }
 
     return byId;
@@ -599,6 +632,218 @@ function AppearanceCard() {
           <Sun className="size-3.5" />
           Light
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Pin preferred agent / JTX gate wallet for LIVE x402 + desk tools.
+ * Saved in local persist (xwealth-jettoptx-v3).
+ * Always Solana base58 — never Privy ethereum `0x` addresses.
+ */
+function AgentWalletPrefsCard() {
+  const preferred = useWealthStore((s) => s.preferredAgentWallet);
+  const label = useWealthStore((s) => s.agentWalletLabel);
+  const source = useWealthStore((s) => s.preferredWalletSource);
+  const solanaWallet = useWealthStore((s) => s.solanaWallet);
+  const setPreferred = useWealthStore((s) => s.setPreferredAgentWallet);
+  const setLabel = useWealthStore((s) => s.setAgentWalletLabel);
+  const setSource = useWealthStore((s) => s.setPreferredWalletSource);
+  const setSolanaWallet = useWealthStore((s) => s.setSolanaWallet);
+
+  const { authenticated, user } = usePrivy();
+  const { wallets: solanaWallets } = useSolanaWallets();
+  const privySolana = pickPrivySolanaAddress(user);
+  const connectedSolana = firstSolanaAddress(
+    solanaWallets.map((w) => w.address),
+  );
+  const defaultSolana = resolveSolanaDeskWallet({
+    preferred,
+    stored: solanaWallet,
+    privySolana,
+    connectedAddresses: solanaWallets.map((w) => w.address),
+  });
+
+  const [draft, setDraft] = useState(() => {
+    const seed = preferred || solanaWallet || "";
+    return looksLikeSolanaPubkey(seed) ? seed : defaultSolana;
+  });
+  const [draftLabel, setDraftLabel] = useState(label);
+
+  // Hydrate Solana when Privy/session catches up, or replace a stale EVM pin.
+  useEffect(() => {
+    if (!defaultSolana) return;
+    const pinnedIsEvm =
+      isEvmAddress(preferred) || isEvmAddress(solanaWallet);
+    const draftEmptyOrEvm = !draft.trim() || isEvmAddress(draft);
+    if (pinnedIsEvm) {
+      setPreferred(defaultSolana);
+      setSolanaWallet(defaultSolana);
+      if (source === "manual" || !source) setSource("privy");
+      setDraft(defaultSolana);
+      return;
+    }
+    if (draftEmptyOrEvm && !looksLikeSolanaPubkey(preferred || solanaWallet)) {
+      setDraft(defaultSolana);
+    }
+  }, [
+    defaultSolana,
+    preferred,
+    solanaWallet,
+    draft,
+    source,
+    setPreferred,
+    setSolanaWallet,
+    setSource,
+  ]);
+
+  function save() {
+    const w = draft.trim();
+    if (w && isEvmAddress(w)) {
+      toast.error(
+        "That looks like an Ethereum address. Paste a Solana base58 pubkey (Phantom / Solflare).",
+      );
+      return;
+    }
+    if (w && !looksLikeSolanaPubkey(w)) {
+      toast.error("Paste a full Solana base58 wallet address");
+      return;
+    }
+    setPreferred(w);
+    setLabel(draftLabel.trim() || "Agent desk wallet");
+    setSolanaWallet(w);
+    toast.success(w ? "Preferred Solana wallet saved" : "Agent wallet cleared");
+  }
+
+  function usePrivySolanaWallet() {
+    const addr = privySolana || connectedSolana;
+    if (!addr) {
+      toast.error(
+        authenticated
+          ? "No Solana wallet linked yet — connect Phantom / Solflare, or paste a base58 pubkey"
+          : "Sign in with X first",
+      );
+      return;
+    }
+    setDraft(addr);
+    setSource("privy");
+    setPreferred(addr);
+    setSolanaWallet(addr);
+    toast.success("Using Solana wallet as preferred agent wallet");
+  }
+
+  const sources: { id: PreferredWalletSource; label: string }[] = [
+    { id: "manual", label: "Manual paste" },
+    { id: "privy", label: "Privy Solana" },
+    { id: "phantom", label: "Phantom / extension" },
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Wallet className="size-4 text-augment" />
+          Preferred agent wallet
+        </CardTitle>
+        <CardDescription>
+          Solana base58 for LIVE x402 settle + JTX proof. This is your desk
+          agent wallet — not the recipient X Money handle. Ethereum{" "}
+          <code className="text-[10px]">0x…</code> addresses are ignored.
+          Local only (browser storage).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="agent-label">Label</Label>
+          <Input
+            id="agent-label"
+            value={draftLabel}
+            onChange={(e) => setDraftLabel(e.target.value)}
+            placeholder="Agent desk wallet"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="agent-wallet">Solana wallet address</Label>
+          <Input
+            id="agent-wallet"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.trim())}
+            placeholder="Solana base58 pubkey"
+            className="font-mono text-xs"
+          />
+          {defaultSolana && draft !== defaultSolana ? (
+            <p className="text-[11px] text-muted">
+              Detected Solana:{" "}
+              <button
+                type="button"
+                className="font-mono text-fg underline-offset-2 hover:underline"
+                onClick={() => {
+                  setDraft(defaultSolana);
+                  setSource("privy");
+                }}
+              >
+                {shortAddr(defaultSolana)}
+              </button>
+            </p>
+          ) : null}
+          {isEvmAddress(draft) ? (
+            <p className="text-[11px] text-warn">
+              Ethereum address detected — replace with Solana base58.
+            </p>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {sources.map((s) => (
+            <Button
+              key={s.id}
+              type="button"
+              size="sm"
+              variant={source === s.id ? "default" : "outline"}
+              onClick={() => setSource(s.id)}
+            >
+              {s.label}
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" onClick={save}>
+            Save preferred wallet
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={usePrivySolanaWallet}
+            disabled={!privyEnabled || !(privySolana || connectedSolana)}
+          >
+            Use Solana wallet
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setDraft("");
+              setPreferred("");
+              setSolanaWallet("");
+              toast.message("Cleared preferred agent wallet");
+            }}
+          >
+            Clear
+          </Button>
+        </div>
+        {looksLikeSolanaPubkey(preferred) ? (
+          <p className="font-mono text-[11px] text-muted break-all">
+            Active: {preferred}
+            {label ? ` · ${label}` : ""}
+          </p>
+        ) : (
+          <p className="text-xs text-muted">
+            No Solana pin yet — connect Phantom / Solflare or paste a base58
+            pubkey. LIVE pay will not use an Ethereum wallet.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

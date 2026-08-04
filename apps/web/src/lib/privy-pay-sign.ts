@@ -1,13 +1,13 @@
 /**
  * Privy-backed payment signature for x402 LIVE intents.
- * Signs a canonical payment message with the user's wallet, then the UI
+ * Signs a canonical payment message with the user's Solana wallet, then the UI
  * opens X Money in a new window for "Pay now".
  */
 
 export type PrivySignResult = {
   signature: string;
   from: string;
-  method: "privy-evm" | "privy-prompt";
+  method: "privy-solana" | "privy-prompt";
 };
 
 /** Canonical message agents / wallets sign for an x402 live intent. */
@@ -33,4 +33,37 @@ export function buildX402SignMessage(opts: {
 
 export function bytesToHex(bytes: Uint8Array): string {
   return `0x${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+}
+
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+/** Encode Solana ed25519 signature bytes as base58. */
+export function bytesToBase58(bytes: Uint8Array): string {
+  if (bytes.length === 0) return "";
+  const digits = [0];
+  for (const byte of bytes) {
+    let carry = byte;
+    for (let i = 0; i < digits.length; i++) {
+      carry += digits[i]! << 8;
+      digits[i] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
+  }
+  let zeros = 0;
+  for (const b of bytes) {
+    if (b === 0) zeros++;
+    else break;
+  }
+  return (
+    "1".repeat(zeros) +
+    digits
+      .reverse()
+      .map((d) => BASE58_ALPHABET[d]!)
+      .join("")
+  );
 }

@@ -29,9 +29,20 @@ export type DryRunReceipt = {
   harness: HarnessId | "manual" | "live";
 };
 
+/** Where the agent / JTX gate pubkey comes from */
+export type PreferredWalletSource = "manual" | "privy" | "phantom";
+
 type WealthState = {
   money: LinkedMoney | null;
   solanaWallet: string;
+  /**
+   * Preferred agent wallet (Solana base58) used for JTX proof + x402 settle.
+   * Distinct from ephemeral Privy sign address when user pins a desk wallet.
+   */
+  preferredAgentWallet: string;
+  /** Optional human label e.g. "desk phantom" / "hermes agent" */
+  agentWalletLabel: string;
+  preferredWalletSource: PreferredWalletSource;
   harnesses: Record<HarnessId, WiredHarness>;
   receipts: DryRunReceipt[];
   /** Handles the user starred from Augments marketplace */
@@ -41,6 +52,9 @@ type WealthState = {
   setMoney: (money: LinkedMoney | null) => void;
   setMoneySetupStatus: (status: MoneySetupStatus) => void;
   setSolanaWallet: (w: string) => void;
+  setPreferredAgentWallet: (w: string) => void;
+  setAgentWalletLabel: (label: string) => void;
+  setPreferredWalletSource: (s: PreferredWalletSource) => void;
   setCustomHarnessName: (name: string) => void;
   wireHarness: (id: HarnessId, wired: boolean) => void;
   addReceipt: (r: Omit<DryRunReceipt, "id">) => void;
@@ -60,6 +74,9 @@ export const useWealthStore = create<WealthState>()(
     (set) => ({
       money: null,
       solanaWallet: "",
+      preferredAgentWallet: "",
+      agentWalletLabel: "Agent desk wallet",
+      preferredWalletSource: "manual",
       harnesses: defaultHarnesses,
       receipts: [],
       starredAugments: [],
@@ -69,7 +86,24 @@ export const useWealthStore = create<WealthState>()(
         set((s) =>
           s.money ? { money: { ...s.money, setupStatus } } : s,
         ),
-      setSolanaWallet: (solanaWallet) => set({ solanaWallet }),
+      setSolanaWallet: (solanaWallet) => {
+        const w = solanaWallet.trim();
+        // Never persist Ethereum 0x as the Solana desk wallet
+        if (w.startsWith("0x")) return;
+        set({ solanaWallet: w });
+      },
+      setPreferredAgentWallet: (preferredAgentWallet) => {
+        const w = preferredAgentWallet.trim();
+        if (w.startsWith("0x")) return;
+        set((s) => ({
+          preferredAgentWallet: w,
+          // Pin also drives JTX settle wallet when set
+          solanaWallet: w || s.solanaWallet,
+        }));
+      },
+      setAgentWalletLabel: (agentWalletLabel) => set({ agentWalletLabel }),
+      setPreferredWalletSource: (preferredWalletSource) =>
+        set({ preferredWalletSource }),
       setCustomHarnessName: (customHarnessName) => set({ customHarnessName }),
       wireHarness: (id, wired) =>
         set((s) => ({
@@ -108,9 +142,15 @@ export const useWealthStore = create<WealthState>()(
       name: "xwealth-jettoptx-v3",
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<WealthState>;
+        // Drop stale Ethereum pins that were saved as "solana" desk wallets
+        const scrub = (w?: string) =>
+          w && w.trim().startsWith("0x") ? "" : (w ?? "");
         return {
           ...current,
           ...p,
+          solanaWallet: scrub(p.solanaWallet) || current.solanaWallet,
+          preferredAgentWallet:
+            scrub(p.preferredAgentWallet) || current.preferredAgentWallet,
           harnesses: {
             ...defaultHarnesses,
             ...(p.harnesses ?? {}),

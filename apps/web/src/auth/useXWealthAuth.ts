@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
+import { pickPrivySolanaAddress } from '@/lib/auth/solana-wallet'
 import { XWEALTH_LOGIN_OPTIONS } from './privyConfig'
 
 export type XWealthAuth = {
@@ -14,11 +15,6 @@ export type XWealthAuth = {
   /** Opens Privy modal — X/Twitter preferred */
   login: (opts?: { xOnly?: boolean }) => void
   logout: () => Promise<void>
-}
-
-function looksLikeSolanaAddress(addr: string | undefined | null): addr is string {
-  if (!addr || addr.startsWith('0x')) return false
-  return addr.length >= 32 && addr.length <= 48 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(addr)
 }
 
 /**
@@ -38,30 +34,7 @@ export function useXWealthAuth(
     return user?.twitter?.name?.trim() || null
   }, [user])
 
-  const solanaAddress = useMemo(() => {
-    if (!user) return null
-
-    const uw = user.wallet?.address
-    if (looksLikeSolanaAddress(uw)) return uw
-
-    for (const a of user.linkedAccounts ?? []) {
-      const any = a as {
-        type?: string
-        address?: string
-        chainType?: string
-      }
-      if (any.chainType === 'solana' && looksLikeSolanaAddress(any.address)) {
-        return any.address
-      }
-      if (
-        (any.type === 'wallet' || any.type === 'smart_wallet') &&
-        looksLikeSolanaAddress(any.address)
-      ) {
-        return any.address
-      }
-    }
-    return null
-  }, [user])
+  const solanaAddress = useMemo(() => pickPrivySolanaAddress(user), [user])
 
   useEffect(() => {
     if (solanaAddress && onSolanaAddress) {

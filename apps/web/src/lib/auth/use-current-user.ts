@@ -2,6 +2,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { authClient, authEnabled } from "./client";
 import { privyEnabled } from "./privy";
 import { resolveAvatarUrl } from "./profile-image";
+import { pickPrivySolanaAddress } from "./solana-wallet";
 import { inferXHandle } from "@/lib/xmoney";
 
 /** Normalized user shape used across the app, auth on or off. */
@@ -17,7 +18,7 @@ export type AppUser = {
   handle: string | null;
   /** True when this is the sandbox/dev fallback (auth not configured). */
   isDevFallback: boolean;
-  /** Wallet address when signed in via Privy wallet. */
+  /** Preferred Solana wallet when linked; never an Ethereum 0x fallback. */
   walletAddress?: string | null;
 };
 
@@ -109,7 +110,8 @@ function usePrivyUserState(): CurrentUserState {
       email,
     }),
     isDevFallback: false,
-    walletAddress: user.wallet?.address ?? null,
+    // Prefer Solana; do not surface Privy's ethereum embedded wallet as the app wallet
+    walletAddress: pickPrivySolanaAddress(user),
   };
 
   return { user: appUser, isPending: false };
