@@ -276,7 +276,7 @@ export const WEB4_API_PLUGINS: Web4ApiPlugin[] = [
     blurb: "JTX gate · dry-run CLI · harness skills (post-login)",
     href: "https://github.com/jettoptx/jettoptx-xwealth",
     docs: "https://github.com/jettoptx/jettoptx-xwealth/blob/main/GROK-PLUGIN.md",
-    logo: "/brand/jtx-logo-dark.png",
+    logo: "/brand/tools/xwealth-plugin.png",
     lane: "agents",
     query: "X Wealth agent plugin JTX x402 dry-run",
     accent: "#e8a87c",

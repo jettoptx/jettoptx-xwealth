@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { usePrivy } from "@privy-io/react-auth";
 import {
+  Check,
   CheckCircle2,
+  Copy,
   ExternalLink,
   Link2,
   Loader2,
@@ -38,7 +40,7 @@ import {
   WalletLogo,
   XLogo,
 } from "@/components/brand-icons";
-import { cn } from "@/lib/utils";
+import { cn, copyText } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -164,6 +166,7 @@ function SettingsPage() {
 
 function AccountCard() {
   const { user } = useCurrentUserState();
+  const [walletCopied, setWalletCopied] = useState(false);
   if (!user) return null;
 
   const remote = user.profileImageUrl;
@@ -171,6 +174,19 @@ function AccountCard() {
   const direct =
     remote && remote !== DEFAULT_AVATAR_URL ? remote : null;
   const src = proxied ?? direct ?? DEFAULT_AVATAR_URL;
+
+  async function copyWallet() {
+    const addr = user?.walletAddress;
+    if (!addr) return;
+    try {
+      await copyText(addr);
+      setWalletCopied(true);
+      toast.success("Solana wallet copied");
+      window.setTimeout(() => setWalletCopied(false), 1600);
+    } catch {
+      toast.error("Copy failed");
+    }
+  }
 
   return (
     <Card>
@@ -212,9 +228,30 @@ function AccountCard() {
             <p className="truncate text-sm text-muted">{user.primaryEmail}</p>
           ) : null}
           {user.walletAddress ? (
-            <p className="truncate font-mono text-xs text-muted">
-              {shortAddr(user.walletAddress)}
-            </p>
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => void copyWallet()}
+                title="Copy Solana wallet"
+                aria-label={`Copy Solana wallet ${user.walletAddress}`}
+                className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md border border-border bg-elevated/60 px-2 py-1 font-mono text-xs text-fg transition hover:border-border-strong hover:bg-elevated"
+              >
+                <span className="truncate sm:hidden">
+                  {shortAddr(user.walletAddress)}
+                </span>
+                <span className="hidden truncate sm:inline">
+                  {user.walletAddress}
+                </span>
+                {walletCopied ? (
+                  <Check className="size-3.5 shrink-0 text-accent" aria-hidden />
+                ) : (
+                  <Copy className="size-3.5 shrink-0 text-muted" aria-hidden />
+                )}
+              </button>
+              <span className="text-[10px] uppercase tracking-wide text-subtle">
+                Solana
+              </span>
+            </div>
           ) : null}
           <div className="flex flex-wrap gap-1.5 pt-1">
             {user.isDevFallback ? (

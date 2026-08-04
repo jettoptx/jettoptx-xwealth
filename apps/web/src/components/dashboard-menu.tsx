@@ -83,9 +83,9 @@ export function DashboardMenu({ compact = false }: { compact?: boolean }) {
     external?: boolean;
   }[] = [
     {
-      to: OPTX_LINKS.augmentsPath,
-      label: "Augments",
-      desc: "Marketplace · live pay directory",
+      to: OPTX_LINKS.paylinksPath,
+      label: "Pay Links",
+      desc: "Pay link directory · social send",
       icon: Sparkles,
       primary: true,
     },

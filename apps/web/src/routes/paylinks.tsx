@@ -1,0 +1,2046 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  BookOpen,
+  Bot,
+  ChevronDown,
+  Copy,
+  ExternalLink,
+  Fish,
+  GripVertical,
+  Landmark,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+  Search,
+  Send,
+  Sparkles,
+  Star,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { Group, Panel, Separator } from "react-resizable-panels";
+import { OPTX_LINKS } from "@/lib/optx-links";
+import { jtxDeniedMessage, jtxFetch, JTX_BUY_URL } from "@/lib/jtx-api";
+import {
+  checkJtxGate,
+  defaultWalletFromEnv,
+  type JtxGateResult,
+} from "@/lib/jtxGate";
+import { Web4OperatingSurface } from "@/components/augments/web4-operating-surface";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import {
+  filterListings,
+  formatCompact,
+  monogram,
+  type AugmentListing,
+} from "@/lib/augments";
+import { avatarProxyUrl } from "@/lib/auth/profile-image";
+import { useXOAuthAccess } from "@/lib/auth/x-oauth-tokens";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { useSocialGraph } from "@/lib/use-social-graph";
+import { useWealthStore } from "@/lib/store";
+import { copyText } from "@/lib/utils";
+import { XLogo } from "@/components/brand-icons";
+import { OPTX_MARK } from "@/lib/brand";
+import {
+  WEB4_SEO,
+  WEB4_SLOGAN,
+  type DiscoverLane,
+} from "@/lib/web4-seo";
+import {
+  loadXSession,
+  normalizeHandle,
+  saveMarketMode,
+  saveVibeInvite,
+} from "@/lib/augment-marketplace";
+
+type CryptoAssetHit = {
+  id: string;
+  name: string;
+  symbol: string;
+  slug: string;
+  rank: number | null;
+  priceUsd: number | null;
+  change24h: number | null;
+  marketCapUsd: number | null;
+  volume24h: number | null;
+  category: string | null;
+  sector: string | null;
+  sectors: string[];
+  tags: string[];
+  logoUrl: string | null;
+  profileUrl: string;
+  source: string;
+  isDefi: boolean;
+};
+
+function formatUsd(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return "—";
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`;
+  if (n >= 1) return `$${n.toFixed(2)}`;
+  return `$${n.toPrecision(3)}`;
+}
+
+export const Route = createFileRoute("/paylinks")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    embed: search.embed === "1" || search.embed === 1 ? "1" : undefined,
+  }),
+  component: PaylinksPage,
+});
+
+type TabId = "all" | "following" | "followers" | "featured";
+
+const PAGE_SIZE = 16;
+
+type TinyFishStatus = {
+  configured: boolean;
+  mcp: string;
+  keys: string;
+  docs: string;
+};
+
+type SearchHit = {
+  position: number;
+  site_name?: string;
+  title: string;
+  snippet?: string;
+  url: string;
+  date?: string;
+  publisher?: string;
+};
+
+type SearchPayload = {
+  ok?: boolean;
+  query?: string;
+  results?: SearchHit[];
+  handles?: string[];
+  total_results?: number;
+  error?: string;
+  message?: string;
+};
+
+type CryptoSearchPayload = {
+  ok?: boolean;
+  query?: string;
+  assets?: CryptoAssetHit[];
+  source?: string;
+  mcp?: string;
+  product?: string;
+  error?: string;
+  message?: string;
+};
+
+type EnrichPayload = {
+  ok?: boolean;
+  enrichment?: {
+    handle: string;
+    displayName: string | null;
+    bio: string | null;
+    avatarUrl: string | null;
+    hasXMoney: boolean | null;
+    evidence: string[];
+    source: string;
+    payUrl: string;
+  };
+  error?: string;
+  message?: string;
+  mcp?: string;
+  keys?: string;
+};
+
+function PaylinksPage() {
+  const { user, isPending } = useCurrentUserState();
+  const signedIn = Boolean(user && !user.isDevFallback);
+  const navigate = useNavigate();
+  const xOauth = useXOAuthAccess();
+  const graph = useSocialGraph(signedIn ? xOauth.accessToken : null);
+
+  const [tab, setTab] = useState<TabId>("all");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [overrides, setOverrides] = useState<
+    Record<string, Partial<AugmentListing>>
+  >({});
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tfStatus, setTfStatus] = useState<TinyFishStatus | null>(null);
+  const [enriching, setEnriching] = useState(false);
+  const [probingMoney, setProbingMoney] = useState(false);
+  const [lastEnrich, setLastEnrich] = useState<EnrichPayload | null>(null);
+  const [lane, setLane] = useState<DiscoverLane>("agents");
+  const [discoverQ, setDiscoverQ] = useState<string>(
+    WEB4_SEO.defaultQueries[0]?.query ?? "X Money agent payments",
+  );
+  const [discoverBusy, setDiscoverBusy] = useState(false);
+  const [discover, setDiscover] = useState<SearchPayload | null>(null);
+  const [cryptoHits, setCryptoHits] = useState<CryptoSearchPayload | null>(
+    null,
+  );
+  /** Pay links panel — handle lookup */
+  const [lookupHandle, setLookupHandle] = useState("");
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupResult, setLookupResult] = useState<EnrichPayload | null>(null);
+
+  const starred = useWealthStore((s) => s.starredAugments);
+  const toggleStar = useWealthStore((s) => s.toggleStarAugment);
+  const walletStore = useWealthStore((s) => s.solanaWallet);
+  const setSolanaWallet = useWealthStore((s) => s.setSolanaWallet);
+
+  const [surface, setSurface] = useState<"ops" | "marketplace">("ops");
+  const [wallet, setWallet] = useState(
+    () => walletStore || defaultWalletFromEnv(),
+  );
+  const [gate, setGate] = useState<JtxGateResult | null>(null);
+  const [gateBusy, setGateBusy] = useState(false);
+  const [network, setNetwork] = useState("solana");
+
+  useEffect(() => {
+    if (walletStore && walletStore !== wallet) setWallet(walletStore);
+  }, [walletStore, wallet]);
+
+  const runGate = useCallback(async () => {
+    const w = wallet.trim();
+    if (w.length < 32) return;
+    setGateBusy(true);
+    try {
+      const result = await checkJtxGate(w);
+      setGate(result);
+      setSolanaWallet(w);
+      if (result.ok) toast.success(`JTX pass · ${result.uiAmount}`);
+      else
+        toast.error(result.error ?? "Need ≥1 JTX", {
+          action: {
+            label: "Buy JTX",
+            onClick: () => window.open(JTX_BUY_URL, "_blank"),
+          },
+        });
+    } finally {
+      setGateBusy(false);
+    }
+  }, [wallet, setSolanaWallet]);
+
+  useEffect(() => {
+    void fetch("/api/tinyfish/enrich")
+      .then((r) => r.json())
+      .then((j: TinyFishStatus) => setTfStatus(j))
+      .catch(() =>
+        setTfStatus({
+          configured: false,
+          mcp: "https://agent.tinyfish.ai/mcp",
+          keys: "https://agent.tinyfish.ai/api-keys",
+          docs: "https://docs.tinyfish.ai/mcp-integration",
+        }),
+      );
+  }, []);
+
+  /**
+   * Show only real X graph data when signed in and live data is available.
+   * Never show celebrity seed data as the authenticated user's directory.
+   */
+  const catalog = useMemo(() => {
+    if (!signedIn) return [] as AugmentListing[];
+    if (graph.source === "x-api") {
+      // Live X OAuth graph loaded — deduplicated list of following + followers
+      const byHandle = new Map<string, AugmentListing>();
+      for (const item of [...graph.following, ...graph.followers]) {
+        const key = item.handle.toLowerCase();
+        if (!byHandle.has(key)) byHandle.set(key, item);
+      }
+      return [...byHandle.values()].map((item) => {
+        const o = overrides[item.handle.toLowerCase()];
+        return o ? { ...item, ...o } : item;
+      });
+    }
+    // No live graph yet — show empty; wait for X OAuth or prompt to connect
+    return [] as AugmentListing[];
+  }, [signedIn, graph.source, graph.following, graph.followers, overrides]);
+
+  const filtered = useMemo(
+    () => filterListings(catalog, { tab, query, tag: null }),
+    [catalog, tab, query],
+  );
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const slice = filtered.slice(
+    safePage * PAGE_SIZE,
+    safePage * PAGE_SIZE + PAGE_SIZE,
+  );
+
+  const selected =
+    signedIn && selectedId
+      ? (catalog.find((x) => x.id === selectedId) ?? null)
+      : null;
+
+  useEffect(() => {
+    if (!signedIn) {
+      setSelectedId(null);
+      return;
+    }
+    if (selectedId && !catalog.some((x) => x.id === selectedId)) {
+      setSelectedId(null);
+    }
+  }, [signedIn, selectedId, catalog]);
+
+  const liveCount = graph.following.length + graph.followers.length;
+  const moneyYes = catalog.filter((x) => x.hasXMoney === true).length;
+  const moneyNo = catalog.filter((x) => x.hasXMoney === false).length;
+  const moneyUnknown = catalog.filter(
+    (x) => x.hasXMoney == null || x.hasXMoney === undefined,
+  ).length;
+
+  const probePageMoney = useCallback(async () => {
+    if (!signedIn) {
+      toast.error("Sign in first");
+      return;
+    }
+    const handles = slice
+      .map((x) => x.handle)
+      .filter(Boolean)
+      .slice(0, 20);
+    if (handles.length === 0) {
+      toast.message("No rows on this page");
+      return;
+    }
+    setProbingMoney(true);
+    try {
+      const res = await jtxFetch("/api/x/probe-money", {
+        method: "POST",
+        body: JSON.stringify({ handles }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        tinyfish?: boolean;
+        counts?: { yes: number; no: number; unknown: number; total: number };
+        results?: Record<
+          string,
+          { hasXMoney: boolean | null; source: string }
+        >;
+        message?: string;
+        error?: string;
+        buyUrl?: string;
+        keys?: string;
+      };
+      if (!res.ok || !json.results) {
+        toast.error(jtxDeniedMessage(json) || "Money probe failed", {
+          action: json.buyUrl
+            ? {
+                label: "Buy JTX",
+                onClick: () => window.open(json.buyUrl || JTX_BUY_URL, "_blank"),
+              }
+            : undefined,
+        });
+        return;
+      }
+      setOverrides((prev) => {
+        const next = { ...prev };
+        for (const [h, r] of Object.entries(json.results!)) {
+          next[h.toLowerCase()] = {
+            ...next[h.toLowerCase()],
+            hasXMoney: r.hasXMoney,
+          };
+        }
+        return next;
+      });
+      const c = json.counts;
+      toast.success(
+        c
+          ? `Money probe · yes ${c.yes} · no ${c.no} · ? ${c.unknown}${
+              json.tinyfish ? " · TinyFish" : " · HTML"
+            }`
+          : "Money probe complete",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Money probe failed");
+    } finally {
+      setProbingMoney(false);
+    }
+  }, [signedIn, slice]);
+
+  const runEnrich = useCallback(
+    async (handle: string, deep = false) => {
+      setEnriching(true);
+      setLastEnrich(null);
+      try {
+        const res = await jtxFetch("/api/tinyfish/enrich", {
+          method: "POST",
+          body: JSON.stringify({ handle, deep }),
+        });
+        const json = (await res.json()) as EnrichPayload & { buyUrl?: string };
+        setLastEnrich(json);
+        if (!res.ok || !json.enrichment) {
+          toast.error(
+            jtxDeniedMessage(json) ||
+              json.message ||
+              json.error ||
+              "TinyFish enrich failed",
+            {
+              action: json.buyUrl
+                ? {
+                    label: "Buy JTX",
+                    onClick: () =>
+                      window.open(json.buyUrl || JTX_BUY_URL, "_blank"),
+                  }
+                : undefined,
+            },
+          );
+          return;
+        }
+        const e = json.enrichment;
+        setOverrides((prev) => ({
+          ...prev,
+          [handle.toLowerCase()]: {
+            displayName: e.displayName || undefined,
+            bio: e.bio || undefined,
+            avatarUrl: e.avatarUrl,
+            hasXMoney: e.hasXMoney,
+            payUrl: e.payUrl,
+            live: true,
+            tags: undefined,
+          },
+        }));
+        toast.success(
+          e.hasXMoney === true
+            ? `@${handle} · X Money yes`
+            : e.hasXMoney === false
+              ? `@${handle} · no X Money`
+              : `@${handle} · enriched (Money unknown)`,
+        );
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err));
+      } finally {
+        setEnriching(false);
+      }
+    },
+    [],
+  );
+
+  /** Look up a pay link by handle via TinyFish enrich */
+  const runLookup = useCallback(async () => {
+    const h = lookupHandle.replace(/^@/, "").trim();
+    if (!h) return;
+    setLookupBusy(true);
+    setLookupResult(null);
+    try {
+      const res = await jtxFetch("/api/tinyfish/enrich", {
+        method: "POST",
+        body: JSON.stringify({ handle: h, deep: false }),
+      });
+      const json = (await res.json()) as EnrichPayload & { buyUrl?: string };
+      setLookupResult(json);
+      if (!res.ok || !json.enrichment) {
+        toast.error(
+          jtxDeniedMessage(json) ||
+            json.message ||
+            json.error ||
+            "Look-up failed — TinyFish key may be missing",
+        );
+        return;
+      }
+      toast.success(`@${h} · pay link ready`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLookupBusy(false);
+    }
+  }, [lookupHandle]);
+
+  const runAgentDiscover = useCallback(
+    async (opts?: {
+      query?: string;
+      domainType?: "web" | "news" | "research_paper";
+      purpose?: string;
+    }) => {
+      const q = (opts?.query ?? discoverQ).trim();
+      if (!q) return;
+      setDiscoverBusy(true);
+      setDiscover(null);
+      setCryptoHits(null);
+      try {
+        const res = await jtxFetch("/api/tinyfish/search", {
+          method: "POST",
+          body: JSON.stringify({
+            query: q,
+            location: "US",
+            language: "en",
+            domainType: opts?.domainType ?? "web",
+            purpose:
+              opts?.purpose ??
+              `X Wealth Pay Links: discover agent-payable identities for ${q}`,
+          }),
+        });
+        const json = (await res.json()) as SearchPayload & { buyUrl?: string };
+        setDiscover(json);
+        if (!res.ok) {
+          toast.error(
+            jtxDeniedMessage(json) || json.message || json.error || "Discover failed",
+          );
+          return;
+        }
+        toast.success(
+          `Discover · ${json.results?.length ?? 0} hits` +
+            (json.handles?.length ? ` · ${json.handles.length} @handles` : ""),
+        );
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err));
+      } finally {
+        setDiscoverBusy(false);
+      }
+    },
+    [discoverQ],
+  );
+
+  const runCryptoDiscover = useCallback(
+    async (opts?: { query?: string; mode?: "crypto" | "defi" }) => {
+      const q = (opts?.query ?? discoverQ).trim();
+      if (!q) return;
+      const mode = opts?.mode ?? (lane === "defi" ? "defi" : "crypto");
+      setDiscoverBusy(true);
+      setCryptoHits(null);
+      setDiscover(null);
+      try {
+        const res = await jtxFetch("/api/blockworks/search", {
+          method: "POST",
+          body: JSON.stringify({ query: q, mode, limit: 12 }),
+        });
+        const json = (await res.json()) as CryptoSearchPayload & {
+          buyUrl?: string;
+        };
+        setCryptoHits(json);
+        if (!res.ok) {
+          toast.error(
+            jtxDeniedMessage(json) ||
+              json.message ||
+              json.error ||
+              "Crypto search failed",
+          );
+          return;
+        }
+        toast.success(
+          `Blockworks · ${json.assets?.length ?? 0} ${mode === "defi" ? "DeFi" : "token"} hits`,
+        );
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : String(err));
+      } finally {
+        setDiscoverBusy(false);
+      }
+    },
+    [discoverQ, lane],
+  );
+
+  const runDiscover = useCallback(
+    async (opts?: {
+      query?: string;
+      domainType?: "web" | "news" | "research_paper";
+      purpose?: string;
+      mode?: "crypto" | "defi";
+      laneOverride?: DiscoverLane;
+    }) => {
+      const active = opts?.laneOverride ?? lane;
+      if (active === "defi") {
+        await runCryptoDiscover({
+          query: opts?.query,
+          mode: opts?.mode ?? "defi",
+        });
+      } else {
+        await runAgentDiscover(opts);
+      }
+    },
+    [lane, runAgentDiscover, runCryptoDiscover],
+  );
+
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
+    paylinks: false,
+    discover: false,
+    directory: false,
+    detail: false,
+  });
+  const togglePanel = (id: string) =>
+    setCollapsed((c) => ({ ...c, [id]: !c[id] }));
+
+  const embed =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("embed") === "1";
+
+  if (surface === "ops") {
+    return (
+      <Web4OperatingSurface
+        embed={embed}
+        wallet={wallet}
+        onWalletChange={(w) => {
+          setWallet(w);
+          setSolanaWallet(w);
+        }}
+        jtxOk={gate ? gate.ok : null}
+        jtxBusy={gateBusy}
+        onCheckJtx={() => void runGate()}
+        discoverQ={discoverQ}
+        onDiscoverQ={setDiscoverQ}
+        lane={lane}
+        onLane={setLane}
+        discoverBusy={discoverBusy}
+        onRunDiscover={(opts) => void runDiscover(opts)}
+        onOpenMarketplace={() => setSurface("marketplace")}
+        network={network}
+        onNetwork={setNetwork}
+      />
+    );
+  }
+
+  const myHandle = user?.handle ?? loadXSession()?.handle ?? null;
+  const myPayUrl = myHandle
+    ? `https://x.com/i/money/pay/${myHandle}`
+    : null;
+
+  return (
+    <main
+      className={cn(
+        "flex flex-col overflow-hidden bg-bg",
+        embed
+          ? "h-dvh max-h-dvh"
+          : "h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-3.5rem)]",
+      )}
+    >
+      {/* Top chrome */}
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2 backdrop-blur-md sm:px-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              onClick={() => setSurface("ops")}
+            >
+              ← Ops
+            </Button>
+            <h1 className="font-display text-sm font-semibold tracking-tight sm:text-base">
+              {OPTX_MARK} · Pay Links
+            </h1>
+            <span className="hidden font-mono text-[10px] text-subtle sm:inline">
+              {WEB4_SLOGAN}
+            </span>
+          </div>
+        </div>
+
+        {/* Lane tabs */}
+        <Tabs
+          value={lane}
+          onValueChange={(v) => {
+            const next = v as DiscoverLane;
+            setLane(next);
+            setDiscover(null);
+            setCryptoHits(null);
+            if (next === "agents") {
+              setDiscoverQ(
+                WEB4_SEO.defaultQueries[0]?.query ?? "X Money agent payments",
+              );
+            } else if (next === "defi") {
+              setDiscoverQ("aave");
+            } else {
+              setDiscoverQ("X Money pay link @handles");
+            }
+          }}
+        >
+          <TabsList className="h-8 rounded-full border border-border bg-elevated/60 p-0.5">
+            <TabsTrigger value="agents" className="h-7 gap-1 rounded-full px-3 text-xs data-[state=active]:bg-surface">
+              <Fish className="size-3.5" />
+              Agents
+            </TabsTrigger>
+            <TabsTrigger value="defi" className="h-7 gap-1 rounded-full px-3 text-xs data-[state=active]:bg-surface">
+              <Landmark className="size-3.5" />
+              DeFi
+            </TabsTrigger>
+            <TabsTrigger value="x" className="h-7 gap-1 rounded-full px-3 text-xs data-[state=active]:bg-surface">
+              <XLogo className="size-3.5" />
+              X
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">
+          <a
+            href={OPTX_LINKS.moaDocs}
+            target="_blank"
+            rel="noreferrer"
+            title="Open OPTX docs (external)"
+          >
+            <BookOpen className="size-3.5" />
+            Docs
+            <ExternalLink className="size-3" />
+          </a>
+        </Button>
+
+        <Button asChild size="sm" variant="secondary" className="h-8">
+          <Link to="/console">Console</Link>
+        </Button>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-hidden p-2">
+        <Group orientation="horizontal" className="h-full gap-0">
+          {/* LEFT column */}
+          <Panel defaultSize={62} minSize={40} className="min-w-0">
+            <Group orientation="vertical" className="h-full">
+              {/* Pay Links panel — replaces API plugins */}
+              <Panel defaultSize={38} minSize={18} collapsible>
+                <DashWindow
+                  id="paylinks"
+                  title="Pay Links"
+                  subtitle={
+                    signedIn && myHandle
+                      ? `@${myHandle} · send · share · lookup`
+                      : "Send · Share · your X Money pay surface"
+                  }
+                  collapsed={collapsed.paylinks}
+                  onToggle={() => togglePanel("paylinks")}
+                >
+                  <div className="flex h-full min-h-0 flex-col gap-3 overflow-auto p-3">
+                    {/* My pay link */}
+                    {signedIn && myHandle ? (
+                      <div className="rounded-xl border border-augment/30 bg-augment/5 p-3">
+                        <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-augment/80">
+                          Your X Money pay link
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <code className="min-w-0 flex-1 truncate rounded border border-border bg-bg px-2 py-1.5 font-mono text-[11px] text-fg">
+                            {myPayUrl}
+                          </code>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 shrink-0 gap-1 px-2 text-[10px]"
+                            onClick={() =>
+                              myPayUrl &&
+                              void copyText(myPayUrl).then(() =>
+                                toast.success("Pay link copied"),
+                              )
+                            }
+                          >
+                            <Copy className="size-3" />
+                            Copy
+                          </Button>
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 shrink-0 gap-1 px-2 text-[10px]"
+                          >
+                            <a
+                              href={myPayUrl ?? "#"}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <XLogo className="size-3" />
+                              Open
+                            </a>
+                          </Button>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-muted">
+                          <span>
+                            Directory: {catalog.length} contacts ·{" "}
+                            {liveCount} graph
+                          </span>
+                          <span>·</span>
+                          <span className="text-emerald-700 dark:text-emerald-400">
+                            ✓ {moneyYes} money
+                          </span>
+                          <span>·</span>
+                          <span className="text-muted">
+                            ? {moneyUnknown} unprobed
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-elevated/40 px-4 py-6 text-center">
+                        <Send className="size-6 text-augment/60" />
+                        <p className="text-sm font-medium text-fg">
+                          Connect X to see your pay link
+                        </p>
+                        <p className="max-w-xs text-[11px] text-muted">
+                          Sign in with X to reveal your personal X Money pay
+                          link, share it, and browse your social graph.
+                        </p>
+                        {!signedIn ? (
+                          <Button asChild size="sm" className="mt-1">
+                            <Link to="/login">
+                              <XLogo className="size-3.5" />
+                              <span className="ml-1.5">Sign in · Pay Link</span>
+                            </Link>
+                          </Button>
+                        ) : !xOauth.accessToken ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="mt-1"
+                            onClick={() => void xOauth.requestXToken()}
+                            disabled={xOauth.isRequesting}
+                          >
+                            <XLogo className="size-3.5" />
+                            <span className="ml-1.5">Authorize X graph</span>
+                          </Button>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {/* Lookup any @handle */}
+                    <div>
+                      <p className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-subtle">
+                        Look up pay link by @handle
+                      </p>
+                      <div className="flex gap-1.5">
+                        <Input
+                          value={lookupHandle}
+                          onChange={(e) => setLookupHandle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") void runLookup();
+                          }}
+                          placeholder="@handle or handle"
+                          className="h-8 flex-1 font-mono text-xs"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 gap-1"
+                          disabled={
+                            lookupBusy ||
+                            !lookupHandle.trim() ||
+                            !(tfStatus?.configured)
+                          }
+                          onClick={() => void runLookup()}
+                          title={
+                            tfStatus?.configured
+                              ? "Look up via TinyFish"
+                              : "TinyFish key not configured"
+                          }
+                        >
+                          {lookupBusy ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Search className="size-3.5" />
+                          )}
+                          Look up
+                        </Button>
+                      </div>
+                      {!tfStatus?.configured && (
+                        <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-400">
+                          Set <code>TINYFISH_API_KEY</code> to enable lookup
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Lookup result */}
+                    {lookupResult?.enrichment ? (
+                      <div className="rounded-lg border border-border bg-bg p-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-fg">
+                              {lookupResult.enrichment.displayName ??
+                                `@${lookupResult.enrichment.handle}`}
+                            </p>
+                            <p className="font-mono text-[11px] text-muted">
+                              @{lookupResult.enrichment.handle}
+                            </p>
+                          </div>
+                          <MoneyBadge
+                            value={lookupResult.enrichment.hasXMoney}
+                          />
+                        </div>
+                        {lookupResult.enrichment.payUrl && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 gap-1 text-[10px]"
+                              onClick={() =>
+                                void copyText(
+                                  lookupResult!.enrichment!.payUrl,
+                                ).then(() => toast.success("Pay link copied"))
+                              }
+                            >
+                              <Copy className="size-3" />
+                              Copy link
+                            </Button>
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="secondary"
+                              className="h-7 gap-1 text-[10px]"
+                            >
+                              <a
+                                href={lookupResult.enrichment.payUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <XLogo className="size-3" />
+                                Send on X
+                              </a>
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : lookupResult?.error && !lookupResult.enrichment ? (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                        {lookupResult.message ?? lookupResult.error}
+                      </p>
+                    ) : null}
+
+                    {/* X graph status — show when signed in */}
+                    {signedIn && (
+                      <div className="rounded-lg border border-border bg-bg/50 p-2 text-[11px] text-muted">
+                        {graph.source === "x-api" ? (
+                          <div className="flex flex-wrap items-center justify-between gap-1.5">
+                            <span>
+                              X graph · {graph.following.length} following ·{" "}
+                              {graph.followers.length} followers
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-6 gap-1 px-2 text-[10px]"
+                              disabled={graph.loading}
+                              onClick={() =>
+                                void graph.refresh({ probeMoney: false })
+                              }
+                            >
+                              <RefreshCw className="size-3" />
+                              Refresh
+                            </Button>
+                          </div>
+                        ) : xOauth.accessToken ? (
+                          <div className="flex items-center gap-2">
+                            {graph.loading ? (
+                              <>
+                                <Loader2 className="size-3 animate-spin" />
+                                <span>Loading X graph…</span>
+                              </>
+                            ) : (
+                              <span className="text-amber-600 dark:text-amber-400">
+                                {graph.error ?? "Graph load failed"}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-2">
+                            <span>Authorize X to load your directory</span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-6 gap-1 px-2 text-[10px]"
+                              onClick={() => void xOauth.requestXToken()}
+                              disabled={xOauth.isRequesting}
+                            >
+                              <XLogo className="size-3" />
+                              Authorize X
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </DashWindow>
+              </Panel>
+
+              <Separator className="group flex h-1.5 items-center justify-center bg-border/40 transition hover:bg-augment/40">
+                <div className="h-0.5 w-8 rounded-full bg-border-strong group-hover:bg-augment" />
+              </Separator>
+
+              {/* Directory panel */}
+              <Panel defaultSize={62} minSize={25}>
+                <DashWindow
+                  id="directory"
+                  title="Directory"
+                  subtitle={`${catalog.length} contacts · ${tab}${
+                    liveCount ? ` · ${liveCount} graph` : ""
+                  } · ✓${moneyYes} money / ✗${moneyNo} none / ?${moneyUnknown} unprobed`}
+                  collapsed={collapsed.directory}
+                  onToggle={() => togglePanel("directory")}
+                  toolbar={
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                      <div className="relative min-w-[8rem] flex-1">
+                        <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-subtle" />
+                        <Input
+                          value={query}
+                          onChange={(e) => {
+                            setQuery(e.target.value);
+                            setPage(0);
+                          }}
+                          placeholder="Search…"
+                          className="h-7 pl-7 text-xs"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 shrink-0 gap-1 font-mono text-[10px]"
+                        disabled={!signedIn || probingMoney || slice.length === 0}
+                        title="Probe X Money on this page via TinyFish"
+                        onClick={() => void probePageMoney()}
+                      >
+                        {probingMoney ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Wallet className="size-3" />
+                        )}
+                        Probe Money
+                      </Button>
+                      <Tabs
+                        value={tab}
+                        onValueChange={(v) => {
+                          setTab(v as TabId);
+                          setPage(0);
+                        }}
+                      >
+                        <TabsList className="h-7">
+                          <TabsTrigger value="all" className="h-6 px-2 text-[10px]">
+                            All
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="following"
+                            className="h-6 px-2 text-[10px]"
+                          >
+                            Following
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="followers"
+                            className="h-6 px-2 text-[10px]"
+                          >
+                            Followers
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="featured"
+                            className="h-6 px-2 text-[10px]"
+                          >
+                            Featured
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    </div>
+                  }
+                >
+                  <div className="flex h-full min-h-0 flex-col">
+                    <div className="min-h-0 flex-1 overflow-auto">
+                      {!signedIn && !isPending ? (
+                        <div className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+                          <p className="text-sm text-muted">
+                            Directory loads from your X social graph.
+                          </p>
+                          <p className="max-w-sm text-[11px] text-subtle">
+                            Sign in with X to see your following and followers
+                            with their X Money status.
+                          </p>
+                          <Button asChild size="sm" className="mt-1">
+                            <Link to="/login">
+                              <XLogo className="size-3.5" />
+                              <span className="ml-1.5">Sign in · Pay Link</span>
+                            </Link>
+                          </Button>
+                        </div>
+                      ) : signedIn && graph.source !== "x-api" && !graph.loading ? (
+                        <div className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+                          <p className="text-sm text-muted">
+                            Authorize X to load your directory
+                          </p>
+                          <p className="max-w-sm text-[11px] text-subtle">
+                            Your followers and following will appear here once
+                            you authorize X graph access.
+                          </p>
+                          {!xOauth.accessToken ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="mt-1"
+                              onClick={() => void xOauth.requestXToken()}
+                              disabled={xOauth.isRequesting}
+                            >
+                              <XLogo className="size-3.5" />
+                              <span className="ml-1.5">Authorize X graph</span>
+                            </Button>
+                          ) : (
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                              {graph.error ?? "Loading…"}
+                            </p>
+                          )}
+                        </div>
+                      ) : graph.loading ? (
+                        <div className="flex h-full min-h-[12rem] items-center justify-center gap-2 text-sm text-muted">
+                          <Loader2 className="size-4 animate-spin" />
+                          Loading X graph…
+                        </div>
+                      ) : (
+                        <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+                          <thead className="sticky top-0 z-[1] bg-elevated/95 backdrop-blur">
+                            <tr className="border-b border-border font-mono text-[10px] uppercase tracking-wider text-subtle">
+                              <th className="px-3 py-2 font-medium">Contact</th>
+                              <th className="px-3 py-2 font-medium">
+                                Money
+                                <span className="ml-1 normal-case text-muted/50">(probe)</span>
+                              </th>
+                              <th className="hidden px-3 py-2 font-medium sm:table-cell">
+                                Followers
+                              </th>
+                              <th className="hidden px-3 py-2 font-medium md:table-cell">
+                                Rail
+                              </th>
+                              <th className="hidden px-3 py-2 font-medium lg:table-cell">
+                                Harness
+                              </th>
+                              <th className="px-3 py-2 text-right font-medium">
+                                ☆
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {slice.map((item) => (
+                              <ListingTableRow
+                                key={item.id}
+                                item={item}
+                                active={selected?.id === item.id}
+                                starred={starred.includes(
+                                  item.handle.toLowerCase(),
+                                )}
+                                onSelect={() => setSelectedId(item.id)}
+                                onStar={() => toggleStar(item.handle)}
+                                onAddToVibe={() => {
+                                  const from =
+                                    user?.handle ||
+                                    loadXSession()?.handle ||
+                                    "you";
+                                  saveVibeInvite({
+                                    fromHandle: from,
+                                    toHandle: item.handle,
+                                    listingId: item.id,
+                                    payUrl: item.payUrl,
+                                    note: item.bio || item.displayName,
+                                  });
+                                  saveMarketMode(true);
+                                  toast.success(
+                                    `VIBE · connected @${normalizeHandle(from)} → @${normalizeHandle(item.handle)}`,
+                                  );
+                                  void navigate({
+                                    to: "/warp",
+                                    search: {
+                                      market: "1",
+                                      vibe: normalizeHandle(item.handle),
+                                    },
+                                  });
+                                }}
+                              />
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                      {filtered.length === 0 && signedIn && graph.source === "x-api" ? (
+                        <p className="p-8 text-center text-sm text-muted">
+                          No contacts match.
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 justify-center gap-2 border-t border-border py-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7"
+                        disabled={!signedIn || safePage <= 0}
+                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      >
+                        Prev
+                      </Button>
+                      <span className="flex items-center font-mono text-[10px] text-subtle">
+                        {safePage + 1}/{pageCount}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7"
+                        disabled={safePage >= pageCount - 1}
+                        onClick={() =>
+                          setPage((p) => Math.min(pageCount - 1, p + 1))
+                        }
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                </DashWindow>
+              </Panel>
+            </Group>
+          </Panel>
+
+          <Separator className="group flex w-1.5 items-center justify-center bg-border/40 transition hover:bg-augment/40">
+            <div className="h-8 w-0.5 rounded-full bg-border-strong group-hover:bg-augment" />
+          </Separator>
+
+          {/* RIGHT column */}
+          <Panel defaultSize={38} minSize={28} className="min-w-0">
+            <Group orientation="vertical">
+              <Panel defaultSize={28} minSize={12} collapsible>
+                <DashWindow
+                  id="discover"
+                  title="Discover"
+                  subtitle={lane.toUpperCase()}
+                  collapsed={collapsed.discover}
+                  onToggle={() => togglePanel("discover")}
+                >
+                  <div className="flex h-full min-h-0 flex-col gap-2 overflow-auto p-2">
+                    <div className="flex gap-1.5">
+                      <Input
+                        value={discoverQ}
+                        onChange={(e) => setDiscoverQ(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void runDiscover();
+                        }}
+                        placeholder={
+                          lane === "agents"
+                            ? "Agent pay, x402…"
+                            : lane === "defi"
+                              ? "aave, jupiter…"
+                              : "X Money, @handles…"
+                        }
+                        className="h-8 flex-1 text-xs"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 bg-sky-700 text-white hover:bg-sky-600 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+                        disabled={
+                          discoverBusy ||
+                          (lane === "agents" && !(tfStatus?.configured))
+                        }
+                        onClick={() => void runDiscover()}
+                      >
+                        {discoverBusy ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Search className="size-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(lane === "defi"
+                        ? WEB4_SEO.cryptoQueries
+                        : WEB4_SEO.defaultQueries
+                      ).map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          disabled={discoverBusy}
+                          onClick={() => {
+                            setDiscoverQ(p.query);
+                            void runDiscover({
+                              query: p.query,
+                              laneOverride: lane,
+                              mode:
+                                "mode" in p && p.mode === "defi"
+                                  ? "defi"
+                                  : lane === "defi"
+                                    ? "defi"
+                                    : undefined,
+                            });
+                          }}
+                          className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted hover:border-sky-500/40 hover:text-sky-800 dark:hover:border-cyan-500/40 dark:hover:text-cyan-200"
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                    {discover?.results && discover.results.length > 0 ? (
+                      <ul className="min-h-0 flex-1 space-y-1 overflow-auto">
+                        {discover.results.slice(0, 12).map((hit) => (
+                          <li key={`${hit.position}-${hit.url}`}>
+                            <a
+                              href={hit.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block truncate rounded border border-border/60 bg-bg/60 px-2 py-1 text-[11px] hover:border-cyan-500/40"
+                            >
+                              {hit.position}. {hit.title}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {cryptoHits?.assets && cryptoHits.assets.length > 0 ? (
+                      <ul className="min-h-0 flex-1 space-y-1 overflow-auto">
+                        {cryptoHits.assets.slice(0, 12).map((a) => (
+                          <li
+                            key={`${a.source}-${a.id}`}
+                            className="flex items-center gap-2 rounded border border-border/60 bg-bg/60 px-2 py-1 text-[11px]"
+                          >
+                            <span className="font-mono text-violet-700 dark:text-violet-300">
+                              {a.symbol}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-muted">
+                              {a.name}
+                            </span>
+                            <span className="font-mono text-subtle">
+                              {formatUsd(a.priceUsd)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {lane === "x" ? (
+                      <div className="rounded-lg border border-border bg-bg/50 p-2 text-[11px] text-muted">
+                        {graph.source === "x-api" ? (
+                          <p>
+                            X graph · {graph.following.length} following ·{" "}
+                            {graph.followers.length} followers
+                            <br />
+                            <span className="text-subtle">
+                              Money ✓{moneyYes} · ✗{moneyNo} · ?{moneyUnknown}
+                              — use Probe Money in Directory to check.
+                            </span>
+                          </p>
+                        ) : (
+                          <p>
+                            {xOauth.accessToken
+                              ? graph.error || "Graph load failed"
+                              : "Authorize X graph for live follows"}
+                          </p>
+                        )}
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {!xOauth.accessToken ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-7 text-[10px]"
+                              onClick={() => void xOauth.requestXToken()}
+                              disabled={xOauth.isRequesting}
+                            >
+                              <XLogo className="size-3" />
+                              <span className="ml-1">Authorize X</span>
+                            </Button>
+                          ) : (
+                            <>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[10px]"
+                                disabled={graph.loading}
+                                onClick={() =>
+                                  void graph.refresh({ probeMoney: false })
+                                }
+                              >
+                                <RefreshCw className="size-3" />
+                                <span className="ml-1">Refresh graph</span>
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[10px]"
+                                disabled={probingMoney}
+                                onClick={() => void probePageMoney()}
+                              >
+                                <Wallet className="size-3" />
+                                <span className="ml-1">Probe Money</span>
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </DashWindow>
+              </Panel>
+
+              <Separator className="group flex h-1.5 items-center justify-center bg-border/40 hover:bg-augment/40">
+                <div className="h-0.5 w-8 rounded-full bg-border-strong group-hover:bg-augment" />
+              </Separator>
+
+              <Panel defaultSize={72} minSize={30}>
+                <DashWindow
+                  id="detail"
+                  title="Pay card"
+                  subtitle={
+                    selected ? `@${selected.handle}` : "Select a row"
+                  }
+                  collapsed={collapsed.detail}
+                  onToggle={() => togglePanel("detail")}
+                >
+                  <div className="h-full min-h-0 space-y-2 overflow-auto p-2">
+                    {!signedIn && !isPending ? (
+                      <div className="flex h-full min-h-[10rem] flex-col items-center justify-center gap-2 px-4 py-8 text-center">
+                        <p className="text-sm text-muted">No pay card selected</p>
+                        <p className="text-[11px] text-subtle">
+                          Sign in to browse contacts and open their pay rails.
+                        </p>
+                        <Button asChild size="sm" variant="secondary" className="mt-1">
+                          <Link to="/login">
+                            <XLogo className="size-3.5" />
+                            <span className="ml-1.5">Sign in</span>
+                          </Link>
+                        </Button>
+                      </div>
+                    ) : selected ? (
+                      <>
+                        <AgentPayCard
+                          item={selected}
+                          starred={starred.includes(
+                            selected.handle.toLowerCase(),
+                          )}
+                          onStar={() => toggleStar(selected.handle)}
+                        />
+                        <TinyFishPanel
+                          handle={selected.handle}
+                          configured={tfStatus?.configured ?? false}
+                          mcp={
+                            tfStatus?.mcp ?? "https://agent.tinyfish.ai/mcp"
+                          }
+                          keysUrl={
+                            tfStatus?.keys ??
+                            "https://agent.tinyfish.ai/api-keys"
+                          }
+                          docs={
+                            tfStatus?.docs ??
+                            "https://docs.tinyfish.ai/mcp-integration"
+                          }
+                          enriching={enriching}
+                          last={lastEnrich}
+                          onEnrich={(deep) =>
+                            void runEnrich(selected.handle, deep)
+                          }
+                        />
+                      </>
+                    ) : (
+                      <p className="p-8 text-center text-sm text-muted">
+                        {isPending
+                          ? "Loading session…"
+                          : "Select a directory row."}
+                      </p>
+                    )}
+                  </div>
+                </DashWindow>
+              </Panel>
+            </Group>
+          </Panel>
+        </Group>
+      </div>
+    </main>
+  );
+}
+
+function DashWindow({
+  id,
+  title,
+  subtitle,
+  collapsed,
+  onToggle,
+  toolbar,
+  children,
+}: {
+  id: string;
+  title: string;
+  subtitle?: string;
+  collapsed?: boolean;
+  onToggle?: () => void;
+  toolbar?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      data-panel={id}
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border-strong/70 bg-surface shadow-panel"
+    >
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-border bg-elevated/70 px-2 py-1">
+        <GripVertical
+          className="size-3.5 shrink-0 cursor-grab text-subtle active:cursor-grabbing"
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs font-semibold text-fg">{title}</div>
+          {subtitle ? (
+            <div className="truncate font-mono text-[10px] text-subtle">
+              {subtitle}
+            </div>
+          ) : null}
+        </div>
+        {toolbar}
+        {onToggle ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="rounded p-1 text-muted hover:bg-bg hover:text-fg"
+            aria-label={collapsed ? "Expand" : "Collapse"}
+          >
+            {collapsed ? (
+              <Maximize2 className="size-3.5" />
+            ) : (
+              <Minimize2 className="size-3.5" />
+            )}
+          </button>
+        ) : null}
+        <ChevronDown
+          className={cn(
+            "size-3.5 text-subtle transition",
+            collapsed && "-rotate-90",
+          )}
+        />
+      </div>
+      {!collapsed ? (
+        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+      ) : (
+        <div className="px-3 py-2 text-[10px] text-subtle">Collapsed</div>
+      )}
+    </section>
+  );
+}
+
+function MoneyBadge({ value }: { value?: boolean | null }) {
+  if (value === true) {
+    return (
+      <Badge
+        className="border-emerald-600/40 bg-emerald-500/15 font-mono text-[10px] text-emerald-800 dark:border-emerald-500/40 dark:text-emerald-300"
+        title="X Money pay surface detected"
+      >
+        ✓ Money
+      </Badge>
+    );
+  }
+  if (value === false) {
+    return (
+      <Badge
+        variant="outline"
+        className="border-rose-600/35 font-mono text-[10px] text-rose-700 dark:border-rose-500/30 dark:text-rose-400/80"
+        title="Probed — no X Money pay surface found"
+      >
+        ✗ No Money
+      </Badge>
+    );
+  }
+  return (
+    <Badge
+      variant="outline"
+      className="cursor-help border-dashed font-mono text-[10px] text-muted"
+      title="Not probed yet. Click 'Probe Money' to check."
+    >
+      ? Unprobed
+    </Badge>
+  );
+}
+
+function ListingTableRow({
+  item,
+  active,
+  starred,
+  onSelect,
+  onStar,
+  onAddToVibe,
+}: {
+  item: AugmentListing;
+  active: boolean;
+  starred: boolean;
+  onSelect: () => void;
+  onStar: () => void;
+  onAddToVibe?: () => void;
+}) {
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenu(null);
+    };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menu]);
+
+  const menuEl =
+    menu && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            role="menu"
+            className="fixed z-[90] min-w-[200px] overflow-hidden rounded-lg border border-augment/40 bg-surface py-1 font-mono shadow-xl"
+            style={{
+              left: Math.min(menu.x, window.innerWidth - 220),
+              top: Math.min(menu.y, window.innerHeight - 200),
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full px-3 py-2 text-left text-[11px] text-fg hover:bg-augment/15"
+              onClick={() => {
+                setMenu(null);
+                onAddToVibe?.();
+              }}
+            >
+              Add to VIBE · connect nodes
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full px-3 py-2 text-left text-[11px] text-muted hover:bg-elevated"
+              onClick={() => {
+                setMenu(null);
+                onSelect();
+              }}
+            >
+              Open pay card
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full px-3 py-2 text-left text-[11px] text-muted hover:bg-elevated"
+              onClick={() => {
+                void navigator.clipboard.writeText(`@${item.handle}`);
+                setMenu(null);
+                toast.success(`Copied @${item.handle}`);
+              }}
+            >
+              Copy @handle
+            </button>
+            {item.payUrl ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="flex w-full px-3 py-2 text-left text-[11px] text-muted hover:bg-elevated"
+                onClick={() => {
+                  void navigator.clipboard.writeText(item.payUrl!);
+                  setMenu(null);
+                  toast.success("Copied pay link");
+                }}
+              >
+                Copy pay link
+              </button>
+            ) : null}
+            <a
+              role="menuitem"
+              href={`https://x.com/${item.handle}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-full px-3 py-2 text-left text-[11px] text-muted hover:bg-elevated"
+              onClick={() => setMenu(null)}
+            >
+              Open on X ↗
+            </a>
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <>
+      {menuEl}
+      <tr
+        role="button"
+        tabIndex={0}
+        onClick={onSelect}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setMenu({ x: e.clientX, y: e.clientY });
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect();
+          }
+        }}
+        className={`cursor-pointer border-b border-border/70 transition-colors last:border-0 ${
+          active
+            ? "bg-augment/10"
+            : "hover:bg-elevated/50"
+        }`}
+      >
+        <td className="px-3 py-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <AvatarBubble item={item} />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="truncate font-medium text-fg">
+                  {item.displayName}
+                </span>
+                {item.featured ? (
+                  <Sparkles className="size-3 shrink-0 text-augment" />
+                ) : null}
+                {item.live ? (
+                  <span
+                    className="rounded bg-sky-500/15 px-1 font-mono text-[9px] uppercase text-sky-800 dark:text-sky-300"
+                    title="From your X following/followers graph"
+                  >
+                    graph
+                  </span>
+                ) : null}
+              </div>
+              <div className="font-mono text-[11px] text-muted">
+                @{item.handle}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td className="px-3 py-2.5">
+          <MoneyBadge value={item.hasXMoney} />
+        </td>
+        <td className="hidden px-3 py-2.5 font-mono text-xs text-muted sm:table-cell">
+          <span className="inline-flex items-center gap-1">
+            <Users className="size-3 opacity-60" />
+            {formatCompact(item.followers)}
+          </span>
+        </td>
+        <td className="hidden px-3 py-2.5 font-mono text-xs text-muted md:table-cell">
+          {item.defaultAmount
+            ? `${item.defaultAmount} ${item.asset}`
+            : <span className="text-subtle/50">—</span>}
+        </td>
+        <td className="hidden max-w-[10rem] truncate px-3 py-2.5 font-mono text-[10px] text-subtle lg:table-cell">
+          {item.harnesses.length > 0
+            ? item.harnesses.join(" · ")
+            : <span className="text-muted/40">—</span>}
+        </td>
+        <td className="px-3 py-2.5 text-right">
+          <button
+            type="button"
+            className="text-muted hover:text-augment"
+            onClick={(e) => {
+              e.stopPropagation();
+              onStar();
+            }}
+            aria-label={starred ? "Unstar" : "Star"}
+          >
+            <Star
+              className={`size-3.5 ${starred ? "fill-augment text-augment" : ""}`}
+            />
+          </button>
+        </td>
+      </tr>
+    </>
+  );
+}
+
+function AgentPayCard({
+  item,
+  starred,
+  onStar,
+}: {
+  item: AugmentListing;
+  starred: boolean;
+  onStar: () => void;
+}) {
+  return (
+    <Card className="overflow-hidden border-augment/25">
+      <div
+        className="h-1.5 w-full"
+        style={{ background: item.accent ?? "var(--color-augment)" }}
+      />
+      <CardHeader>
+        <div className="flex items-start gap-3">
+          <AvatarBubble item={item} large />
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-lg">{item.displayName}</CardTitle>
+            <CardDescription className="flex flex-wrap items-center gap-1.5 font-mono">
+              @{item.handle}
+              <MoneyBadge value={item.hasXMoney} />
+            </CardDescription>
+          </div>
+          <button
+            type="button"
+            onClick={onStar}
+            className="text-muted hover:text-augment"
+            aria-label={starred ? "Unstar" : "Star"}
+          >
+            <Star
+              className={`size-4 ${starred ? "fill-augment text-augment" : ""}`}
+            />
+          </button>
+        </div>
+        <p className="mt-3 text-sm leading-relaxed text-muted">{item.bio}</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-2 text-center text-xs">
+          <div className="rounded-lg border border-border bg-bg p-2">
+            <div className="text-subtle">Followers</div>
+            <div className="mt-0.5 font-mono text-fg">
+              {formatCompact(item.followers)}
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-bg p-2">
+            <div className="text-subtle">Following</div>
+            <div className="mt-0.5 font-mono text-fg">
+              {formatCompact(item.following)}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border bg-bg p-3">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-subtle">
+            <Wallet className="size-3" />
+            Pay card · {item.kind}
+          </div>
+          <p className="mt-2 break-all font-mono text-xs text-fg">
+            {item.payUrl}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {item.defaultAmount ? (
+              <Badge variant="outline" className="font-mono">
+                {item.defaultAmount} {item.asset}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="font-mono text-muted/50">
+                amount unknown
+              </Badge>
+            )}
+            <Badge variant="outline" className="font-mono">
+              {item.network}
+            </Badge>
+            {item.harnesses.length > 0 ? (
+              item.harnesses.map((h) => (
+                <Badge key={h} variant="default" className="gap-1">
+                  <Bot className="size-3" />
+                  {h}
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="outline" className="font-mono text-muted/50">
+                harness unknown
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => {
+              void copyText(item.payUrl).then(() =>
+                toast.success("Pay link copied"),
+              );
+            }}
+          >
+            Copy pay link
+          </Button>
+          <Button asChild variant="secondary" className="w-full">
+            <a
+              href={item.payUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5"
+            >
+              <XLogo className="size-3.5" />
+              Open on X
+              <ExternalLink className="size-3.5 opacity-70" />
+            </a>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full border-augment/40 text-augment hover:bg-augment/10"
+            onClick={() => {
+              void copyText(
+                `Page @${item.handle} via X Wealth x402 · ${item.payUrl}${item.defaultAmount ? ` · ${item.defaultAmount} USDC Solana` : " · Solana"}`,
+              ).then(() => toast.success("Agent page payload copied"));
+            }}
+          >
+            Copy agent page payload
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TinyFishPanel({
+  handle,
+  configured,
+  mcp,
+  keysUrl,
+  docs,
+  enriching,
+  last,
+  onEnrich,
+}: {
+  handle: string;
+  configured: boolean;
+  mcp: string;
+  keysUrl: string;
+  docs: string;
+  enriching: boolean;
+  last: EnrichPayload | null;
+  onEnrich: (deep: boolean) => void;
+}) {
+  return (
+    <Card className="border-sky-600/25 dark:border-cyan-500/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Fish className="size-4 text-sky-700 dark:text-cyan-400" />
+          TinyFish agent
+        </CardTitle>
+        <CardDescription className="text-xs leading-relaxed">
+          Fetch X profile + Money surfaces via{" "}
+          <a
+            href={docs}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sky-800 underline-offset-2 hover:underline dark:text-cyan-400/90"
+          >
+            TinyFish MCP / Fetch API
+          </a>
+          . Harnesses connect at{" "}
+          <code className="text-[10px] text-fg/80">{mcp}</code>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!configured ? (
+          <div className="rounded-lg border border-amber-600/30 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-900 dark:border-amber-500/25 dark:text-amber-100/90">
+            Server key missing. Set{" "}
+            <code className="text-amber-950 dark:text-amber-50">TINYFISH_API_KEY</code> in Vercel /
+            .env.local, then redeploy.{" "}
+            <a
+              href={keysUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              Get a key
+            </a>
+          </div>
+        ) : (
+          <p className="text-[11px] text-subtle">
+            Key configured · free Fetch enrich for @{handle}
+          </p>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            size="sm"
+            className="w-full bg-sky-700 text-white hover:bg-sky-600 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+            disabled={!configured || enriching}
+            onClick={() => onEnrich(false)}
+          >
+            {enriching ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Fish className="size-3.5" />
+            )}
+            <span className="ml-1.5">Enrich @{handle}</span>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full border-cyan-500/30"
+            disabled={!configured || enriching}
+            onClick={() => onEnrich(true)}
+          >
+            Deep Money probe (agent credits)
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="w-full text-xs text-muted"
+            onClick={() => {
+              void copyText(mcp).then(() =>
+                toast.success("TinyFish MCP URL copied"),
+              );
+            }}
+          >
+            Copy MCP URL for Grok / Claude / Cursor
+          </Button>
+        </div>
+
+        {last?.enrichment ? (
+          <div className="rounded-lg border border-border bg-bg p-2.5 text-[11px] leading-relaxed text-muted">
+            <div className="font-mono text-fg">
+              {last.enrichment.source} · Money=
+              {last.enrichment.hasXMoney === null
+                ? "?"
+                : String(last.enrichment.hasXMoney)}
+            </div>
+            {last.enrichment.evidence?.map((line) => (
+              <div key={line} className="mt-0.5 text-subtle">
+                · {line}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {last?.error && !last.enrichment ? (
+          <p className="text-[11px] text-amber-400/90">
+            {last.message || last.error}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AvatarBubble({
+  item,
+  large,
+}: {
+  item: AugmentListing;
+  large?: boolean;
+}) {
+  const size = large ? "h-12 w-12 text-sm" : "h-10 w-10 text-xs";
+  const src = avatarProxyUrl(item.avatarUrl);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [item.avatarUrl]);
+
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt={`@${item.handle}`}
+        width={large ? 48 : 40}
+        height={large ? 48 : 40}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+        className={`${size} shrink-0 rounded-full border border-border object-cover`}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`grid shrink-0 place-items-center rounded-full border border-border font-mono font-semibold ${size}`}
+      style={{
+        background: `color-mix(in oklab, ${item.accent ?? "var(--color-augment)"} 18%, transparent)`,
+        color: item.accent ?? "var(--color-augment)",
+      }}
+    >
+      {monogram(item.handle)}
+    </div>
+  );
+}

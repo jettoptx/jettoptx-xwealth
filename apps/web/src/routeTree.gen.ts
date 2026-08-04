@@ -15,6 +15,7 @@ import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as DojoRouteImport } from './routes/dojo'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MoaRouteImport } from './routes/moa'
+import { Route as PaylinksRouteImport } from './routes/paylinks'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as WarpRouteImport } from './routes/warp'
 import { Route as ApiAvatarRouteImport } from './routes/api/avatar'
@@ -57,6 +58,11 @@ const LoginRoute = LoginRouteImport.update({
 const MoaRoute = MoaRouteImport.update({
   id: '/moa',
   path: '/moa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaylinksRoute = PaylinksRouteImport.update({
+  id: '/paylinks',
+  path: '/paylinks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/dojo': typeof DojoRoute
   '/login': typeof LoginRoute
   '/moa': typeof MoaRoute
+  '/paylinks': typeof PaylinksRoute
   '/settings': typeof SettingsRoute
   '/warp': typeof WarpRoute
   '/api/avatar': typeof ApiAvatarRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/dojo': typeof DojoRoute
   '/login': typeof LoginRoute
   '/moa': typeof MoaRoute
+  '/paylinks': typeof PaylinksRoute
   '/settings': typeof SettingsRoute
   '/warp': typeof WarpRoute
   '/api/avatar': typeof ApiAvatarRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/dojo': typeof DojoRoute
   '/login': typeof LoginRoute
   '/moa': typeof MoaRoute
+  '/paylinks': typeof PaylinksRoute
   '/settings': typeof SettingsRoute
   '/warp': typeof WarpRoute
   '/api/avatar': typeof ApiAvatarRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/dojo'
     | '/login'
     | '/moa'
+    | '/paylinks'
     | '/settings'
     | '/warp'
     | '/api/avatar'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/dojo'
     | '/login'
     | '/moa'
+    | '/paylinks'
     | '/settings'
     | '/warp'
     | '/api/avatar'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/dojo'
     | '/login'
     | '/moa'
+    | '/paylinks'
     | '/settings'
     | '/warp'
     | '/api/avatar'
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   DojoRoute: typeof DojoRoute
   LoginRoute: typeof LoginRoute
   MoaRoute: typeof MoaRoute
+  PaylinksRoute: typeof PaylinksRoute
   SettingsRoute: typeof SettingsRoute
   WarpRoute: typeof WarpRoute
   ApiAvatarRoute: typeof ApiAvatarRoute
@@ -319,6 +332,13 @@ declare module '@tanstack/react-router' {
       path: '/moa'
       fullPath: '/moa'
       preLoaderRoute: typeof MoaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/paylinks': {
+      id: '/paylinks'
+      path: '/paylinks'
+      fullPath: '/paylinks'
+      preLoaderRoute: typeof PaylinksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -422,6 +442,7 @@ const rootRouteChildren: RootRouteChildren = {
   DojoRoute: DojoRoute,
   LoginRoute: LoginRoute,
   MoaRoute: MoaRoute,
+  PaylinksRoute: PaylinksRoute,
   SettingsRoute: SettingsRoute,
   WarpRoute: WarpRoute,
   ApiAvatarRoute: ApiAvatarRoute,
