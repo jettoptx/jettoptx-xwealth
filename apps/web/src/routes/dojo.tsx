@@ -157,7 +157,7 @@ function DojoHubPage() {
           </Button>
           <Button asChild size="sm" variant="outline" className="h-7">
             <Link
-              to="/paylinks"
+              to="/augments"
               search={{ embed: undefined }}
               className="inline-flex items-center gap-1"
             >

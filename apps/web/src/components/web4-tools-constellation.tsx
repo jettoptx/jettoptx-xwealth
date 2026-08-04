@@ -46,7 +46,7 @@ const TOOLS = [
     id: "jtx",
     label: "JTX",
     sub: "OPT𝕏 · X Wealth",
-    href: "/paylinks",
+    href: "/augments",
     color: "#34d399",
     /** Theme-resolved at render — see resolveLogo */
     logo: "/brand/jtx-logo-dark.png",

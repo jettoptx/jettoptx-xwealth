@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const items = [
   { to: "/console" as const, label: "Console", icon: LayoutDashboard },
-  { to: "/paylinks" as const, label: "Pay Links", icon: Sparkles, accent: true },
+  { to: "/augments" as const, label: "Augments", icon: Sparkles, accent: true },
   { to: "/settings" as const, label: "Settings", icon: Settings2 },
   { to: "/dojo" as const, label: "DOJO", icon: FlaskConical },
 ];

@@ -21,7 +21,7 @@ export type DashboardMenuProps = {
   align?: "left" | "right";
 };
 
-type ShellRoute = "/paylinks" | "/dojo" | "/warp" | "/console";
+type ShellRoute = "/augments" | "/paylinks" | "/dojo" | "/warp" | "/console";
 
 export function DashboardMenu({
   view,
@@ -179,7 +179,13 @@ export function DashboardMenu({
           </p>
           <NavItem
             title="Augments"
-            subtitle="Marketplace cards · directory · VIBE"
+            subtitle="Marketplace · ops · Web4 SEO"
+            active={pathname === "/augments" || pathname === "/paylinks"}
+            onClick={() => goShell("/augments")}
+          />
+          <NavItem
+            title="Pay Links"
+            subtitle="Directory · social send (under Augments)"
             active={pathname === "/paylinks"}
             onClick={() => goShell("/paylinks")}
           />

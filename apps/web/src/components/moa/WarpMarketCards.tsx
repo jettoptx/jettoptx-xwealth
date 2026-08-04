@@ -480,7 +480,7 @@ export function WarpMarketFloatingCards({
               variant="outline"
               className="h-7 w-full border-white/20 bg-white/5 text-[10px] text-white/75 backdrop-blur-sm"
               onClick={() =>
-                void navigate({ to: "/paylinks", search: { embed: undefined } })
+                void navigate({ to: "/augments", search: { embed: undefined } })
               }
             >
               Full Discover (SPA)
