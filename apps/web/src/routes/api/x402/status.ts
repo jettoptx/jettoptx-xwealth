@@ -33,10 +33,12 @@ export const Route = createFileRoute("/api/x402/status")({
             },
             buzzChannel: {
               url: OPTX_LINKS.buzzChannel,
+              web: OPTX_LINKS.buzzChannelWeb,
+              relay: OPTX_LINKS.buzzRelayUrl,
               label: OPTX_LINKS.buzzChannelLabel,
               note: joeBuzzNotify
-                ? "JOE_BUZZ_WEBHOOK_URL configured — create challenge will POST notify payload."
-                : "Set JOE_BUZZ_WEBHOOK_URL (or JETTCHAT_NOTIFY_URL) to push sign challenges into Buzz/JettChat. Until then, harness skill on DOJO is the approve surface.",
+                ? "JOE_BUZZ_WEBHOOK_URL configured — create challenge POSTs notify bridge; canonical chat is Buzz Desktop (JOE community)."
+                : "Set JOE_BUZZ_WEBHOOK_URL (or JETTCHAT_NOTIFY_URL) for notify bridge. Canonical chat is Buzz Desktop → wss://joe.communities.buzz.xyz. Harness skill remains the fallback approve surface.",
             },
           },
           {

@@ -35,3 +35,12 @@ mcp/jtx-trade-paper/data/ledger.json
 mcp/jtx-trade-paper/data/*.tmp
 __pycache__/
 *.pyc
+.vercel
+.env*.local
+
+# Session temp files from Vercel/Buzz wiring — never commit
+.buzz-secret.tmp
+.vercel-token.tmp
+.env.buzz.tmp
+**/.buzz-secret.tmp
+**/.vercel-token.tmp

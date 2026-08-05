@@ -174,9 +174,20 @@ async function handleCreate(
   const webhook = joeBuzzWebhookUrl();
   if (webhook) {
     try {
+      const notifyHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      const buzzSecret =
+        process.env.JOE_BUZZ_WEBHOOK_SECRET?.trim() ||
+        process.env.JETTCHAT_NOTIFY_SECRET?.trim() ||
+        "";
+      if (buzzSecret) {
+        notifyHeaders.Authorization = `Bearer ${buzzSecret}`;
+        notifyHeaders["X-Joe-Buzz-Token"] = buzzSecret;
+      }
       const notify = await fetch(webhook, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: notifyHeaders,
         body: JSON.stringify({
           type: "x402_sign_challenge",
           channel: "buzz",
@@ -258,7 +269,7 @@ ${message}
       cloudflareWalletHandle: OPTX_LINKS.cloudflareWalletHandle,
       note: rec.buzzNotified
         ? "JOE notified Buzz webhook — approve in JettChat/Buzz or harness."
-        : "Buzz DM webhook not configured — use harness skill below (or set JOE_BUZZ_WEBHOOK_URL). MOJO QR is not the primary path.",
+        : "Buzz notify bridge not configured — use harness skill below (or set JOE_BUZZ_WEBHOOK_URL). Canonical chat is Buzz Desktop (JOE community). MOJO QR is not the primary path.",
     },
     { headers: { "Cache-Control": "no-store" } },
   );

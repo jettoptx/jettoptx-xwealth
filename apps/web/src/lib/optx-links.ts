@@ -48,12 +48,18 @@ export const OPTX_LINKS = {
   docsRoot: OPTX_DOCS,
   jettchat: "https://www.jettoptx.chat/",
   /**
-   * Buzz channel (JettChat / JOE agent harness chat) — #jett-chat (c=2).
-   * x402 LIVE sign challenges notify here when JOE_BUZZ_WEBHOOK_URL is set.
+   * Canonical chat = Block Buzz Desktop (JOE community relay).
+   * jettoptx.chat/send is EMO QR / bot portal only — not the Buzz inbox.
+   * x402 notify still bridges via JOE_BUZZ_WEBHOOK_URL → JettChat STDB until
+   * a Buzz-native publish path is wired; Open Buzz always goes to the app.
    */
-  buzzChannel: "https://www.jettoptx.chat/send?c=2",
-  buzzChannelLabel: "Buzz · JettChat",
-  /** Full chat account (Usage / Wallet / Security / Connectors) */
+  buzzRelayUrl: "wss://joe.communities.buzz.xyz",
+  /** Opens Buzz Desktop and connects to the JOE community relay. */
+  buzzChannel: "buzz://connect?relay=wss://joe.communities.buzz.xyz",
+  /** Web fallback (download / manage communities) when deep link unavailable. */
+  buzzChannelWeb: "https://buzz.xyz",
+  buzzChannelLabel: "Buzz · JOE",
+  /** Full chat account (Usage / Wallet / Security / Connectors) on jettoptx.chat */
   jettchatSettings: "https://www.jettoptx.chat/settings",
   jettchatSettingsWallet: "https://www.jettoptx.chat/settings?tab=Wallet",
   home: "https://jettoptics.ai",

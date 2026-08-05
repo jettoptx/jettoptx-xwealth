@@ -1,11 +1,11 @@
 /**
- * NOTR relay interface — Buzz-style Space Cowboys channel (jettoptx.chat).
+ * NOTR relay interface — Buzz (Block) JOE community.
  *
  * Public proofs stay local (Zustand) for Map of Augments v1.
  * Private delegate payloads are stubbed until Buzz/Nostr wiring.
  *
  * @see docs/MOA-GRAPH.md
- * @see https://www.jettoptx.chat/send?c=2
+ * @see OPTX_LINKS.buzzRelayUrl (wss://joe.communities.buzz.xyz)
  */
 
 import {
