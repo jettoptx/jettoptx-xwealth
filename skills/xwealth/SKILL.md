@@ -65,6 +65,7 @@ When a hosted proxy meters X API usage, fees go to `FEE_RECEIVER_SOLANA`
 2. Paste pay/transfer URL or QR  
 3. `parseMoneyLink` → dry-run intent (`npm run dry-run`)  
 4. **STOP** before LIVE unless product + policy allow  
+5. **High-stakes LIVE** → load skill **`optx-high-stakes`**: mint Aaron `approve_action` QR (`jettmojo://approve`) → MOJO SEND-02 gaze → never silent keypair autosign  
 
 ## Hosts
 

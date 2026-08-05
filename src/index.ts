@@ -29,6 +29,16 @@ import {
 import { createPayoutNode as createPayoutNodeDef } from "./nodes/payout.js";
 
 export {
+  mintApproveAction,
+  pollChallenge,
+  waitForApproval,
+  defaultAaronUrl,
+  type ApproveActionMeta,
+  type ApproveChallenge,
+  type ChallengePoll,
+} from "./high-stakes.js";
+
+export {
   checkJtxGate,
   JTX_MINT_V2,
   DEFAULT_RPC,
