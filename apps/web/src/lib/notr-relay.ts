@@ -1,11 +1,11 @@
 /**
- * NOTR relay interface — Buzz (Block) JOE community.
+ * NOTR relay interface — Buzz (Block) Augment community.
  *
  * Public proofs stay local (Zustand) for Map of Augments v1.
  * Private delegate payloads are stubbed until Buzz/Nostr wiring.
  *
  * @see docs/MOA-GRAPH.md
- * @see OPTX_LINKS.buzzRelayUrl (wss://joe.communities.buzz.xyz)
+ * @see OPTX_LINKS.buzzRelayUrl (wss://augment.communities.buzz.xyz)
  */
 
 import {

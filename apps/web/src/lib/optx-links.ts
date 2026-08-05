@@ -48,17 +48,17 @@ export const OPTX_LINKS = {
   docsRoot: OPTX_DOCS,
   jettchat: "https://www.jettoptx.chat/",
   /**
-   * Canonical chat = Block Buzz Desktop (JOE community relay).
+   * Canonical chat = Block Buzz Desktop (Augment community relay).
    * jettoptx.chat/send is EMO QR / bot portal only — not the Buzz inbox.
    * x402 notify still bridges via JOE_BUZZ_WEBHOOK_URL → JettChat STDB until
    * a Buzz-native publish path is wired; Open Buzz always goes to the app.
    */
-  buzzRelayUrl: "wss://joe.communities.buzz.xyz",
-  /** Opens Buzz Desktop and connects to the JOE community relay. */
-  buzzChannel: "buzz://connect?relay=wss://joe.communities.buzz.xyz",
+  buzzRelayUrl: "wss://augment.communities.buzz.xyz",
+  /** Opens Buzz Desktop and connects to the Augment community relay. */
+  buzzChannel: "buzz://connect?relay=wss://augment.communities.buzz.xyz",
   /** Web fallback (download / manage communities) when deep link unavailable. */
   buzzChannelWeb: "https://buzz.xyz",
-  buzzChannelLabel: "Buzz · JOE",
+  buzzChannelLabel: "Buzz · Augment",
   /** Full chat account (Usage / Wallet / Security / Connectors) on jettoptx.chat */
   jettchatSettings: "https://www.jettoptx.chat/settings",
   jettchatSettingsWallet: "https://www.jettoptx.chat/settings?tab=Wallet",

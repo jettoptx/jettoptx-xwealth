@@ -724,8 +724,8 @@ export function X402Panel() {
             </div>
             <p className="text-xs text-muted">
               {challenge.buzzNotified
-                ? "JOE notified the Buzz bridge. Approve in Buzz Desktop (JOE community) or paste the signature below."
-                : "Buzz notify did not land — approve with the harness skill (Console / agent plugin), or paste a signature. Open Buzz Desktop → JOE community (wss://joe.communities.buzz.xyz)."}
+                ? "JOE notified the Buzz bridge. Approve in Buzz Desktop (Augment community) or paste the signature below."
+                : "Buzz notify did not land — approve with the harness skill (Console / agent plugin), or paste a signature. Open Buzz Desktop → Augment community (wss://augment.communities.buzz.xyz)."}
             </p>
             <pre className="max-h-40 overflow-auto rounded-md border border-border bg-bg p-2 font-mono text-[10px] text-muted whitespace-pre-wrap">
               {challenge.message}

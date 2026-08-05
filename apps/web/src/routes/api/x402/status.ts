@@ -37,8 +37,8 @@ export const Route = createFileRoute("/api/x402/status")({
               relay: OPTX_LINKS.buzzRelayUrl,
               label: OPTX_LINKS.buzzChannelLabel,
               note: joeBuzzNotify
-                ? "JOE_BUZZ_WEBHOOK_URL configured — create challenge POSTs notify bridge; canonical chat is Buzz Desktop (JOE community)."
-                : "Set JOE_BUZZ_WEBHOOK_URL (or JETTCHAT_NOTIFY_URL) for notify bridge. Canonical chat is Buzz Desktop → wss://joe.communities.buzz.xyz. Harness skill remains the fallback approve surface.",
+                ? "JOE_BUZZ_WEBHOOK_URL configured — create challenge POSTs notify bridge; canonical chat is Buzz Desktop (Augment community)."
+                : "Set JOE_BUZZ_WEBHOOK_URL (or JETTCHAT_NOTIFY_URL) for notify bridge. Canonical chat is Buzz Desktop → wss://augment.communities.buzz.xyz. Harness skill remains the fallback approve surface.",
             },
           },
           {

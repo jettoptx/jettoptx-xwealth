@@ -269,7 +269,7 @@ ${message}
       cloudflareWalletHandle: OPTX_LINKS.cloudflareWalletHandle,
       note: rec.buzzNotified
         ? "JOE notified Buzz webhook — approve in JettChat/Buzz or harness."
-        : "Buzz notify bridge not configured — use harness skill below (or set JOE_BUZZ_WEBHOOK_URL). Canonical chat is Buzz Desktop (JOE community). MOJO QR is not the primary path.",
+        : "Buzz notify bridge not configured — use harness skill below (or set JOE_BUZZ_WEBHOOK_URL). Canonical chat is Buzz Desktop (Augment community). MOJO QR is not the primary path.",
     },
     { headers: { "Cache-Control": "no-store" } },
   );
