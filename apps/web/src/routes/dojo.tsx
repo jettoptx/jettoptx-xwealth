@@ -4,6 +4,7 @@ import {
   BookOpen,
   FlaskConical,
   Loader2,
+  LogIn,
   Orbit,
   Settings2,
   ShieldAlert,
@@ -27,11 +28,13 @@ import { PayLinkPanel } from "@/components/pay-link-panel";
 import { X402Panel } from "@/components/x402-panel";
 import { MoneySetupBanner } from "@/components/money-setup-banner";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { usePrivySolanaWallet } from "@/lib/auth/use-privy-solana-wallet";
 import { useWealthStore } from "@/lib/store";
 import {
   checkJtxGate,
-  defaultWalletFromEnv,
+  isOwnedSolanaWallet,
   JTX_MINT,
+  jtxUiGatePassed,
   type JtxGateResult,
 } from "@/lib/jtxGate";
 import { cn } from "@/lib/utils";
@@ -42,20 +45,28 @@ export const Route = createFileRoute("/dojo")({
 
 /**
  * DOJO — operator paylink cockpit (distinct from /console account workspace).
- * JTX ≥1 gate is UI-enforced; LIVE settle gated by server X402_LIVE_ENABLED
- * (see /api/x402/status).
+ * JTX ≥1 gate is UI-enforced against the signed-in user's Privy Solana wallet;
+ * LIVE settle gated by server X402_LIVE_ENABLED (see /api/x402/status) + proven ownership.
  */
 function DojoHubPage() {
-  const { user } = useCurrentUserState();
+  const { user, isPending: userPending } = useCurrentUserState();
   const money = useWealthStore((s) => s.money);
-  const walletStore = useWealthStore((s) => s.solanaWallet);
   const setSolanaWallet = useWealthStore((s) => s.setSolanaWallet);
+  const {
+    ready: privyReady,
+    authenticated,
+    addresses,
+    primaryAddress,
+    creating: walletCreating,
+    login,
+    ensureWallet,
+    ownsAddress,
+  } = usePrivySolanaWallet();
 
-  const [wallet, setWallet] = useState(
-    () => walletStore || defaultWalletFromEnv() || "",
-  );
+  const [selectedWallet, setSelectedWallet] = useState("");
   const [gate, setGate] = useState<JtxGateResult | null>(null);
   const [gateBusy, setGateBusy] = useState(false);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
   const [x402Status, setX402Status] = useState<{
     liveEnabled: boolean;
     heliusConfigured: boolean;
@@ -63,10 +74,38 @@ function DojoHubPage() {
     joeBuzzNotifyConfigured?: boolean;
   } | null>(null);
 
+  // Bind selection to Privy-owned wallets only (never arbitrary paste / store foreign keys).
   useEffect(() => {
-    if (walletStore && walletStore !== wallet) setWallet(walletStore);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync store → local once
-  }, [walletStore]);
+    if (!authenticated) {
+      setSelectedWallet("");
+      setGate(null);
+      return;
+    }
+    if (addresses.length === 0) {
+      setSelectedWallet((prev) => (prev && ownsAddress(prev) ? prev : ""));
+      setGate((prev) =>
+        prev && ownsAddress(prev.wallet) ? prev : null,
+      );
+      return;
+    }
+    setSelectedWallet((prev) =>
+      prev && ownsAddress(prev) ? prev : (primaryAddress ?? addresses[0] ?? ""),
+    );
+  }, [authenticated, addresses, primaryAddress, ownsAddress]);
+
+  // Persist only the Privy-bound address into the wealth store for settle headers.
+  useEffect(() => {
+    if (selectedWallet && ownsAddress(selectedWallet)) {
+      setSolanaWallet(selectedWallet);
+    }
+  }, [selectedWallet, ownsAddress, setSolanaWallet]);
+
+  // Drop stale gate results if the selected wallet is no longer owned.
+  useEffect(() => {
+    if (gate && !ownsAddress(gate.wallet)) {
+      setGate(null);
+    }
+  }, [gate, ownsAddress]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,21 +128,68 @@ function DojoHubPage() {
     };
   }, []);
 
+  async function provisionWallet() {
+    setProvisionError(null);
+    try {
+      const addr = await ensureWallet();
+      setSelectedWallet(addr);
+      setSolanaWallet(addr);
+    } catch (e) {
+      setProvisionError(
+        e instanceof Error ? e.message : "Could not create Solana wallet",
+      );
+    }
+  }
+
   async function runGate() {
-    const w = wallet.trim();
-    setSolanaWallet(w);
+    if (!authenticated) {
+      login();
+      return;
+    }
+    setProvisionError(null);
     setGateBusy(true);
     try {
+      let w = selectedWallet.trim();
+      if (!w || !ownsAddress(w)) {
+        w = await ensureWallet();
+        setSelectedWallet(w);
+      }
+      // ensureWallet remembers the address in sessionOwned; re-check via hook state
+      // may lag one render — trust the returned address as Privy-provisioned.
+      setSolanaWallet(w);
       const result = await checkJtxGate(w);
+      const ownedNow = addresses.includes(w) ? addresses : [...addresses, w];
+      if (result.ok && !isOwnedSolanaWallet(result.wallet, ownedNow)) {
+        setGate({
+          ...result,
+          ok: false,
+          error: "JTX balance must be on your Privy Solana wallet",
+        });
+        return;
+      }
       setGate(result);
+    } catch (e) {
+      setProvisionError(
+        e instanceof Error ? e.message : "Gate check failed",
+      );
+      setGate(null);
     } finally {
       setGateBusy(false);
     }
   }
 
-  const jtxOk = gate?.ok === true;
+  const ownedForUi =
+    selectedWallet && !addresses.includes(selectedWallet)
+      ? [...addresses, selectedWallet]
+      : addresses;
+  const jtxOk = jtxUiGatePassed(gate, ownedForUi);
   const sessionHandle = user?.handle ?? null;
   const step = !gate ? 1 : !jtxOk ? 1 : money ? 3 : 2;
+  const sessionLoading = userPending || !privyReady;
+  const canCheck =
+    authenticated &&
+    (Boolean(selectedWallet && ownsAddress(selectedWallet)) ||
+      addresses.length === 0);
 
   return (
     <main className="dojo-shell relative flex h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] w-full flex-col overflow-hidden">
@@ -222,81 +308,158 @@ function DojoHubPage() {
                   JTX ≥1 gate
                 </CardTitle>
                 <CardDescription>
-                  Product SKU = wallet balance. Mint{" "}
+                  Product SKU = your Privy Solana wallet balance. Mint{" "}
                   <span className="font-mono text-[10px]">
                     {JTX_MINT.slice(0, 8)}…
                   </span>
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="dojo-wallet" className="inline-flex items-center gap-1.5">
-                    <Wallet className="size-3.5 text-subtle" />
-                    Solana wallet pubkey
-                  </Label>
-                  <div className="flex flex-col gap-2">
-                    <Input
-                      id="dojo-wallet"
-                      value={wallet}
-                      onChange={(e) => setWallet(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && void runGate()}
-                      placeholder="Base58 pubkey"
-                      className="font-mono text-sm"
-                      spellCheck={false}
-                    />
-                    <Button
-                      type="button"
-                      onClick={() => void runGate()}
-                      disabled={gateBusy || wallet.trim().length < 32}
-                    >
-                      {gateBusy ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        "Check JTX"
-                      )}
+                {sessionLoading ? (
+                  <p className="inline-flex items-center gap-2 text-xs text-muted">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Loading session…
+                  </p>
+                ) : !authenticated ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted">
+                      Sign in with Privy to unlock DOJO tools with{" "}
+                      <strong className="text-fg">your</strong> Solana wallet.
+                      Pasting a foreign pubkey is not allowed.
+                    </p>
+                    <Button type="button" onClick={() => login()} className="w-full">
+                      <LogIn className="size-4" />
+                      Sign in to check JTX
                     </Button>
                   </div>
-                </div>
-                {gate ? (
-                  <div className="space-y-2">
-                    <p
-                      className={cn(
-                        "rounded-lg border px-3 py-2 font-mono text-xs",
-                        gate.ok
-                          ? "border-emerald-600/35 bg-emerald-500/10 text-emerald-800 dark:border-emerald-500/30 dark:text-emerald-200"
-                          : "border-warn/40 bg-warn/10 text-warn",
+                ) : (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="dojo-wallet"
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        <Wallet className="size-3.5 text-subtle" />
+                        Your Privy Solana wallet
+                      </Label>
+                      {addresses.length === 0 ? (
+                        <div className="space-y-2">
+                          <p className="rounded-lg border border-border bg-elevated/50 px-3 py-2 text-xs text-muted">
+                            No Solana wallet linked yet. Create an embedded
+                            wallet via Privy to bind this gate.
+                          </p>
+                          <Button
+                            type="button"
+                            onClick={() => void provisionWallet()}
+                            disabled={walletCreating}
+                            className="w-full"
+                          >
+                            {walletCreating ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              "Create Solana wallet"
+                            )}
+                          </Button>
+                        </div>
+                      ) : addresses.length === 1 ? (
+                        <Input
+                          id="dojo-wallet"
+                          value={selectedWallet}
+                          readOnly
+                          className="font-mono text-sm"
+                          spellCheck={false}
+                          aria-readonly
+                        />
+                      ) : (
+                        <select
+                          id="dojo-wallet"
+                          value={selectedWallet}
+                          onChange={(e) => {
+                            setGate(null);
+                            setSelectedWallet(e.target.value);
+                          }}
+                          className="flex h-9 w-full rounded-md border border-border bg-surface px-3 font-mono text-sm text-fg outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                        >
+                          {addresses.map((a) => (
+                            <option key={a} value={a}>
+                              {a}
+                            </option>
+                          ))}
+                        </select>
                       )}
-                    >
-                      {gate.ok
-                        ? `PASS · ${gate.uiAmount} JTX · tools unlocked`
-                        : `FAIL · ${gate.error ?? "need ≥1 JTX"}`}
-                    </p>
-                    {!gate.ok ? (
-                      <Button asChild size="sm" variant="secondary" className="w-full">
+                      {addresses.length > 0 ? (
+                        <div className="flex flex-col gap-2 pt-1">
+                          <Button
+                            type="button"
+                            onClick={() => void runGate()}
+                            disabled={
+                              gateBusy ||
+                              walletCreating ||
+                              !canCheck ||
+                              selectedWallet.trim().length < 32
+                            }
+                          >
+                            {gateBusy ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              "Check JTX"
+                            )}
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                    {provisionError ? (
+                      <p className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
+                        {provisionError}
+                      </p>
+                    ) : null}
+                    {gate ? (
+                      <div className="space-y-2">
+                        <p
+                          className={cn(
+                            "rounded-lg border px-3 py-2 font-mono text-xs",
+                            jtxOk
+                              ? "border-emerald-600/35 bg-emerald-500/10 text-emerald-800 dark:border-emerald-500/30 dark:text-emerald-200"
+                              : "border-warn/40 bg-warn/10 text-warn",
+                          )}
+                        >
+                          {jtxOk
+                            ? `PASS · ${gate.uiAmount} JTX · tools unlocked`
+                            : `FAIL · ${gate.error ?? "need ≥1 JTX on your wallet"}`}
+                        </p>
+                        {!jtxOk ? (
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="secondary"
+                            className="w-full"
+                          >
+                            <a
+                              href={OPTX_LINKS.jtxBuy}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Buy JTX · astroknots.space/buy
+                            </a>
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : addresses.length > 0 ? (
+                      <p className="text-xs text-muted">
+                        Check JTX on your linked wallet before dry-run x402. CLI:{" "}
+                        <code className="text-[11px]">npm run check-jtx</code>
+                        {" · "}
                         <a
                           href={OPTX_LINKS.jtxBuy}
                           target="_blank"
                           rel="noreferrer"
+                          className="font-medium text-accent underline-offset-2 hover:underline"
                         >
-                          Buy JTX · astroknots.space/buy
+                          Buy JTX
                         </a>
-                      </Button>
+                      </p>
                     ) : null}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted">
-                    Run the gate before dry-run x402. CLI:{" "}
-                    <code className="text-[11px]">npm run check-jtx</code>
-                    {" · "}
-                    <a
-                      href={OPTX_LINKS.jtxBuy}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-medium text-accent underline-offset-2 hover:underline"
-                    >
-                      Buy JTX
-                    </a>
-                  </p>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -307,8 +470,8 @@ function DojoHubPage() {
               </p>
               <ul className="mt-2 space-y-1.5 leading-relaxed">
                 <li>
-                  <strong className="text-fg">DOJO</strong> — JTX gate, paylink,
-                  x402 dry-run (this page).
+                  <strong className="text-fg">DOJO</strong> — Privy wallet JTX
+                  gate, paylink, x402 dry-run (this page).
                 </li>
                 <li>
                   <strong className="text-fg">Console</strong> — account session,
@@ -333,16 +496,22 @@ function DojoHubPage() {
             >
               {!jtxOk ? (
                 <div className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
-                  JTX gate locked — paste a wallet with ≥1 JTX and re-check, or{" "}
-                  <a
-                    href={OPTX_LINKS.jtxBuy}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium underline underline-offset-2"
-                  >
-                    buy JTX at astroknots.space/buy
-                  </a>
-                  .
+                  {!authenticated
+                    ? "JTX gate locked — sign in with Privy, then check JTX on your linked Solana wallet."
+                    : addresses.length === 0
+                      ? "JTX gate locked — create a Privy Solana wallet, hold ≥1 JTX on it, then check."
+                      : "JTX gate locked — Check JTX on your Privy wallet (foreign balances do not unlock tools), or "}
+                  {authenticated && addresses.length > 0 ? (
+                    <a
+                      href={OPTX_LINKS.jtxBuy}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium underline underline-offset-2"
+                    >
+                      buy JTX at astroknots.space/buy
+                    </a>
+                  ) : null}
+                  {authenticated && addresses.length > 0 ? "." : null}
                 </div>
               ) : null}
 
@@ -360,7 +529,7 @@ function DojoHubPage() {
             </div>
 
             <p className="pb-2 text-center font-mono text-[10px] text-subtle">
-              /dojo · JTX gate · PayLinkPanel · X402Panel ·{" "}
+              /dojo · Privy JTX gate · PayLinkPanel · X402Panel ·{" "}
               {x402Status
                 ? `LIVE ${x402Status.liveEnabled ? "on" : "off"} · Buzz ${
                     x402Status.joeBuzzNotifyConfigured ? "DM" : "harness"

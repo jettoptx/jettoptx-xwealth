@@ -208,7 +208,13 @@ const RAIL: Array<{
 type Props = {
   embed?: boolean;
   wallet: string;
-  onWalletChange: (w: string) => void;
+  /** When true, pubkey is read-only (Privy-bound); no foreign paste. */
+  walletLocked?: boolean;
+  authenticated?: boolean;
+  walletCreating?: boolean;
+  onSignIn?: () => void;
+  /** @deprecated Ignored when walletLocked — kept optional for older callers */
+  onWalletChange?: (w: string) => void;
   jtxOk: boolean | null;
   jtxBusy?: boolean;
   onCheckJtx: () => void;
@@ -229,6 +235,10 @@ type Props = {
 export function Web4OperatingSurface({
   embed,
   wallet,
+  walletLocked = false,
+  authenticated = true,
+  walletCreating = false,
+  onSignIn,
   onWalletChange,
   jtxOk,
   jtxBusy,
@@ -447,21 +457,54 @@ export function Web4OperatingSurface({
               <option value="btc">BTC</option>
               <option value="l2">L2s</option>
             </select>
-            <Input
-              value={wallet}
-              onChange={(e) => onWalletChange(e.target.value)}
-              placeholder="Solana wallet"
-              className="h-8 w-28 font-mono text-[11px] sm:w-40"
-              spellCheck={false}
-            />
+            {walletLocked && !authenticated ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1"
+                onClick={() => onSignIn?.()}
+              >
+                Sign in
+              </Button>
+            ) : (
+              <Input
+                value={wallet}
+                readOnly={walletLocked}
+                onChange={
+                  walletLocked
+                    ? undefined
+                    : (e) => onWalletChange?.(e.target.value)
+                }
+                placeholder={
+                  walletLocked
+                    ? walletCreating
+                      ? "Creating…"
+                      : "Privy Solana"
+                    : "Solana wallet"
+                }
+                title={
+                  walletLocked
+                    ? "Bound to your Privy Solana wallet"
+                    : "Solana wallet"
+                }
+                className="h-8 w-28 font-mono text-[11px] sm:w-40"
+                spellCheck={false}
+              />
+            )}
             <Button
               size="sm"
               variant="outline"
               className="h-8 gap-1"
-              disabled={jtxBusy || wallet.trim().length < 32}
+              disabled={
+                jtxBusy ||
+                walletCreating ||
+                (walletLocked
+                  ? !authenticated
+                  : wallet.trim().length < 32)
+              }
               onClick={onCheckJtx}
             >
-              {jtxBusy ? (
+              {jtxBusy || walletCreating ? (
                 <Loader2 className="size-3.5 animate-spin" />
               ) : (
                 <Wallet className="size-3.5" />
@@ -480,7 +523,7 @@ export function Web4OperatingSurface({
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-warn/30 bg-warn/10 px-3 py-2 text-xs text-warn sm:px-4">
             <span className="inline-flex items-center gap-1.5">
               <Shield className="size-3.5" />
-              Tools locked — need ≥1 JTX on the wallet above.
+              Tools locked — need ≥1 JTX on your Privy Solana wallet.
             </span>
             <a
               href={JTX_BUY_URL}

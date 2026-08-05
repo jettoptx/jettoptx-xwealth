@@ -109,8 +109,10 @@ function deny(
 
 /**
  * Enforce ≥1 JTX.
- * @param mode `balance` = paste pubkey + on-chain check (+ rate limit).
- *             `proven`  = balance + ed25519 ownership proof (settle/mojo).
+ * @param mode `balance` = wallet header/body + on-chain check (+ rate limit).
+ *             Public balance reads are intentional for rate-limited tool APIs;
+ *             product UI unlock (DOJO) must bind the wallet to Privy first.
+ *             `proven`  = balance + ed25519 ownership proof (settle/mojo) — keep.
  */
 export async function requireJtxGate(
   request: Request,
