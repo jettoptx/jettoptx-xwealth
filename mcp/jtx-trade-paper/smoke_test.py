@@ -57,6 +57,25 @@ def main() -> int:
     assert o["ok"] is True
     assert o["fill"]["simulated"] is True
 
+    # traderJOE ladder symbol — must accept SPCX/USDC (not unknown paper market)
+    pairs = [m["pair"] for m in m["markets"]]
+    assert "SPCX/USDC" in pairs, f"SPCX/USDC missing from paper markets: {pairs}"
+    spcx = pp(
+        "paper_order_spcx_usdc",
+        server.jtx_paper_order(
+            side="buy",
+            symbol="SPCX/USDC",
+            size=0.05,
+            mode="paper",
+            note="smoke ladder symbol",
+        ),
+    )
+    assert spcx.get("ok") is True, spcx
+    assert spcx["fill"]["symbol"] == "SPCX/USDC"
+    assert spcx["fill"]["base"] == "SPCX"
+    assert spcx["fill"]["simulated"] is True
+    assert float(spcx["balances"].get("SPCX", 0)) >= 0.05
+
     pnl = pp("pnl", server.jtx_paper_pnl())
     assert pnl["ok"] is True
     assert "pnl_usd" in pnl

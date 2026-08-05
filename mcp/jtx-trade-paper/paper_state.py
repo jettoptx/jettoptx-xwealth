@@ -18,6 +18,7 @@ DEFAULT_BALANCES: dict[str, float] = {
     "USDC": 10_000.0,
     "SOL": 50.0,
     "JTX": 1_000.0,
+    "SPCX": 0.0,
 }
 
 # Synthetic paper markets (Jupiter/Meteora-shaped stubs for training)
@@ -31,6 +32,16 @@ DEFAULT_MARKETS: list[dict[str, Any]] = [
         "mid": 148.30,
         "liquidity_usd": 2_500_000,
         "note": "synthetic mid; not a live quote feed",
+    },
+    {
+        "id": "paper-spcx-usdc",
+        "pair": "SPCX/USDC",
+        "venue": "jtx-equity-paper",
+        "bid": 114.50,
+        "ask": 115.50,
+        "mid": 115.00,
+        "liquidity_usd": 250_000,
+        "note": "tokenized equity stub for traderJOE ladder (SPCX mint on JTX); mid is synthetic not DexScreener live",
     },
     {
         "id": "paper-jtx-usdc",
