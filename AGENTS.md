@@ -6,9 +6,10 @@ This repo is **jettoptx-xwealth** (OPTX Augment-08).
 
 1. Read **[INSTALL.md](./INSTALL.md)** and **[prompts/AGENT_SYSTEM.md](./prompts/AGENT_SYSTEM.md)**.  
 2. Optional edge: clone **[jettoptx-aaron-router](https://github.com/jettoptx/jettoptx-aaron-router)** next to this repo.  
-3. Skills: **`skills/xwealth/SKILL.md`**, paper trade MCP **`skills/jtx-trade-mcp/SKILL.md`** (`mcp/jtx-trade-paper/`, `npm run mcp:paper:smoke`).  
+3. Skills: **`skills/xwealth/SKILL.md`**, paper trade MCP **`skills/jtx-trade-mcp/SKILL.md`** (`mcp/jtx-trade-paper/`, `npm run mcp:paper:smoke`), high-stakes **`skills/optx-high-stakes/SKILL.md`**.  
 4. **Auth:** `SOLANA_WALLET` + `npm run setup` must pass **≥1 JTX**. Optional X OAuth via Jett Optical Encryption app. **No Privy.**  
 5. Never live-send unless the human says **`LIVE`** and product supports it.  
+5b. **LIVE high-stakes:** mint Aaron `approve_action` QR (`npm run high-stakes:mint`) → MOJO SEND-02 gaze — **never silent keypair autosign**. Docs: `docs/JOE-AUTO-SWARM-HIGH-STAKES.md`.  
 6. **Crypto default:** USDC on Solana or Base (`agent-cards/crypto-rails.json`).  
 7. **Agentcard** is **optional** third-party tooling — not required to install or demo.
 

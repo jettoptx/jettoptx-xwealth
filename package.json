@@ -25,7 +25,11 @@
     "mcp:paper": "python mcp/jtx-trade-paper/server.py",
     "mcp:paper:smoke": "python mcp/jtx-trade-paper/smoke_test.py",
     "mcp:paper:cli": "python mcp/jtx-trade-paper/cli.py",
-    "digest:bookmarks": "node scripts/digest-bookmarks.mjs"
+    "digest:bookmarks": "node scripts/digest-bookmarks.mjs",
+    "high-stakes:mint": "node scripts/high-stakes-cli.mjs mint",
+    "high-stakes:status": "node scripts/high-stakes-cli.mjs status",
+    "high-stakes:wait": "node scripts/high-stakes-cli.mjs wait",
+    "high-stakes": "node scripts/high-stakes-cli.mjs"
   },
   "keywords": [
     "optx",
