@@ -85,9 +85,15 @@ export function DashboardMenu({ compact = false }: { compact?: boolean }) {
     {
       to: OPTX_LINKS.augmentsPath,
       label: "Augments",
-      desc: "Marketplace · live pay directory",
+      desc: "Marketplace · ops · Web4 SEO",
       icon: Sparkles,
       primary: true,
+    },
+    {
+      to: OPTX_LINKS.paylinksPath,
+      label: "Pay Links",
+      desc: "Sub-page · directory · social send",
+      icon: Sparkles,
     },
     {
       to: OPTX_LINKS.settingsPath,

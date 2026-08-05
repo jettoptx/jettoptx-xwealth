@@ -682,7 +682,7 @@ function AugmentsPage() {
           </div>
         </div>
 
-        {/* Primary lanes: Agents Â· DeFi Â· X */}
+        {/* Primary lanes: Agents · DeFi · X */}
         <Tabs
           value={lane}
           onValueChange={(v) => {
@@ -716,6 +716,14 @@ function AugmentsPage() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* Pay Links is a sub-page of Augments — not a top-level shell tab */}
+        <Button asChild size="sm" variant="default" className="h-8 gap-1.5">
+          <Link to="/paylinks" search={{ embed: undefined }}>
+            <Wallet className="size-3.5" />
+            Pay Links
+          </Link>
+        </Button>
 
         {/* Docs MOA lives on jettoptx.dev — not a rival full-page toggle */}
         <Button asChild size="sm" variant="outline" className="h-8 gap-1.5">

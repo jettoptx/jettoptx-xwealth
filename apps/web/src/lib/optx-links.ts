@@ -25,8 +25,12 @@ export const OPTX_LINKS = {
   wealth: "https://xwealth.space",
   moa: "https://xwealth.space/moa",
   moaDocs: `${OPTX_DOCS}/dojo/moa`,
+  /** Full Augments tab (ops + marketplace) — top-level shell route */
   augments: "https://xwealth.space/augments",
   augmentsPath: "/augments",
+  /** Pay Links — sub-page of Augments (directory / send / lookup) */
+  paylinks: "https://xwealth.space/paylinks",
+  paylinksPath: "/paylinks",
   moaPath: "/moa",
   consolePath: "/console",
   x402Pay: "https://xwealth.space/api/x402/pay",
