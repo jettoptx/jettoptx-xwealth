@@ -80,6 +80,8 @@ import {
   saveMarketMode,
   saveVibeInvite,
 } from "@/lib/augment-marketplace";
+import { DoubleZeroPlatformPanel } from "@/components/doublezero-platform-panel";
+import { DOUBLEZERO_PLATFORM } from "@/lib/doublezero";
 type CryptoAssetHit = {
   id: string;
   name: string;
@@ -113,6 +115,46 @@ function formatUsd(n: number | null | undefined): string {
 export const Route = createFileRoute("/augments")({
   validateSearch: (search: Record<string, unknown>) => ({
     embed: search.embed === "1" || search.embed === 1 ? "1" : undefined,
+  }),
+  head: () => ({
+    meta: [
+      {
+        title: `${OPTX_MARK} · Augment Marketplace · Web4 SEO + DoubleZero`,
+      },
+      {
+        name: "description",
+        content:
+          "X Wealth Augment Marketplace — Web4 Agent SEO for @handles, X Money, DeFi, and the DoubleZero open-source Solana network platform (status/links, Edge, contracts).",
+      },
+      {
+        name: "keywords",
+        content:
+          "DoubleZero, Solana, Web4 SEO, X Wealth, Edge multicast, status/links, open source, agent payments, x402",
+      },
+      {
+        property: "og:title",
+        content: "Augment Marketplace · Web4 SEO · DoubleZero",
+      },
+      {
+        property: "og:description",
+        content:
+          "Discover agent-payable identities and DoubleZero open-source network infra on X Wealth.",
+      },
+    ],
+    links: [
+      {
+        rel: "related",
+        href: "https://data.doublezero.xyz/status/links",
+      },
+      {
+        rel: "related",
+        href: "https://github.com/malbeclabs/doublezero",
+      },
+      {
+        rel: "related",
+        href: "https://docs.malbeclabs.com/",
+      },
+    ],
   }),
   component: AugmentsPage,
 });
@@ -616,6 +658,7 @@ function AugmentsPage() {
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
     plugins: false,
+    doublezero: false,
     discover: false,
     directory: false,
     detail: false,
@@ -755,11 +798,11 @@ function AugmentsPage() {
                 orientation="vertical"
                 className="h-full"
               >
-                <Panel defaultSize={38} minSize={18} collapsible>
+                <Panel defaultSize={34} minSize={16} collapsible>
                   <DashWindow
                     id="plugins"
                     title="API plugins"
-                    subtitle="Grok · Aeon · Chat · TinyFish · Blockworks · QuickNode · X"
+                    subtitle="Grok · Aeon · Chat · TinyFish · Blockworks · QuickNode · DoubleZero · X"
                     collapsed={collapsed.plugins}
                     onToggle={() => togglePanel("plugins")}
                   >
@@ -773,7 +816,8 @@ function AugmentsPage() {
                             p.pinAgents ||
                             p.id === "blockworks" ||
                             p.id === "quicknode" ||
-                            p.id === "tinyfish"
+                            p.id === "tinyfish" ||
+                            p.id.startsWith("doublezero")
                           );
                         }
                         if (lane === "x") {
@@ -819,7 +863,25 @@ function AugmentsPage() {
                   <div className="h-0.5 w-8 rounded-full bg-border-strong group-hover:bg-augment" />
                 </Separator>
 
-                <Panel defaultSize={62} minSize={25}>
+                <Panel defaultSize={28} minSize={14} collapsible>
+                  <DashWindow
+                    id="doublezero"
+                    title="DoubleZero OS"
+                    subtitle={`${DOUBLEZERO_PLATFORM.length} surfaces · status/links · open source`}
+                    collapsed={collapsed.doublezero}
+                    onToggle={() => togglePanel("doublezero")}
+                  >
+                    <div className="h-full min-h-0 overflow-hidden p-1.5">
+                      <DoubleZeroPlatformPanel className="h-full" compact />
+                    </div>
+                  </DashWindow>
+                </Panel>
+
+                <Separator className="group flex h-1.5 items-center justify-center bg-border/40 transition hover:bg-augment/40">
+                  <div className="h-0.5 w-8 rounded-full bg-border-strong group-hover:bg-augment" />
+                </Separator>
+
+                <Panel defaultSize={34} minSize={20}>
                   <DashWindow
                     id="directory"
                     title="Directory"

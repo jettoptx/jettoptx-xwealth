@@ -255,6 +255,24 @@ export const AUGMENT_SEED: AugmentListing[] = [
     relation: "marketplace",
     accent: "#f97316",
   },
+  {
+    id: "doublezero",
+    handle: "doublezero",
+    displayName: "DoubleZero",
+    bio: "Open-source high-perf Solana network · live link status · Edge multicast · Web4 infra SEO.",
+    payUrl: "https://x.com/i/money/pay/doublezero",
+    kind: "pay",
+    defaultAmount: "0.10",
+    network: "solana",
+    asset: "USDC",
+    harnesses: ["hermes", "claude", "grok-build"],
+    followers: 48_000,
+    following: 120,
+    tags: ["solana", "doublezero", "open-source", "network", "featured"],
+    featured: true,
+    relation: "marketplace",
+    accent: "#7dd3fc",
+  },
 ];
 
 export function formatCompact(n: number): string {
@@ -303,6 +321,9 @@ export const MARKETPLACE_TAGS = [
   "developers",
   "x-money",
   "live",
+  "doublezero",
+  "open-source",
+  "network",
 ] as const;
 
 /** Convert a live X graph person into an Augment listing card. */

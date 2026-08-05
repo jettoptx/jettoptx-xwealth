@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { XLogo } from "@/components/brand-icons";
+import { DoubleZeroPlatformPanel } from "@/components/doublezero-platform-panel";
 
 export type MarketCardId = "plugins" | "directory" | "discover" | "pay";
 
@@ -363,30 +364,33 @@ export function WarpMarketFloatingCards({
           onLayout={(p) => onLayout("plugins", p)}
           onClose={() => onToggle("plugins")}
         >
-          <div className="grid grid-cols-2 gap-1.5 p-2">
-            {WEB4_API_PLUGINS.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-start gap-1.5 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1.5 backdrop-blur-sm"
-              >
-                {p.logo ? (
-                  <img
-                    src={p.logo}
-                    alt=""
-                    className="mt-0.5 size-5 shrink-0 rounded object-contain"
-                    loading="lazy"
-                  />
-                ) : null}
-                <div className="min-w-0">
-                  <p className="truncate font-mono text-[10px] font-semibold text-white/90">
-                    {p.name}
-                  </p>
-                  <p className="truncate font-mono text-[8px] text-white/45">
-                    {p.blurb?.slice(0, 48) ?? p.id}
-                  </p>
+          <div className="flex h-full min-h-0 flex-col gap-1.5 overflow-auto p-2">
+            <div className="grid grid-cols-2 gap-1.5">
+              {WEB4_API_PLUGINS.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-start gap-1.5 rounded-lg border border-white/12 bg-white/[0.04] px-2 py-1.5 backdrop-blur-sm"
+                >
+                  {p.logo ? (
+                    <img
+                      src={p.logo}
+                      alt=""
+                      className="mt-0.5 size-5 shrink-0 rounded object-contain"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-[10px] font-semibold text-white/90">
+                      {p.name}
+                    </p>
+                    <p className="truncate font-mono text-[8px] text-white/45">
+                      {p.blurb?.slice(0, 48) ?? p.id}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <DoubleZeroPlatformPanel compact />
           </div>
         </GlassFloatCard>
       )}
